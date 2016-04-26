@@ -54,7 +54,10 @@ function aStarSearch<Node> (
     heuristics : (n:Node) => number,
     timeout : number
 ) : SearchResult<Node> {
+  var toVisit : [Node];
     // A dummy search result: it just picks the first possible neighbour
+    // SearchResult should contain cheapest path from the start node to every other node
+    // including the goal node
     var result : SearchResult<Node> = {
         path: [start],
         cost: 0
@@ -161,4 +164,3 @@ class GridGraph implements Graph<GridNode> {
         return str;
     }
 }
-
