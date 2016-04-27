@@ -33,6 +33,8 @@ class SearchResult<Node> {
     cost : number;
 }
 
+//interface KeyValuePair extends Array<string | number> { 0: string; 1: number; }
+
 /**
 * A\* search implementation, parameterised by a `Node` type. The code
 * here is just a template; you should rewrite this function
@@ -55,15 +57,33 @@ function aStarSearch<Node> (
     heuristics : (n:Node) => number,
     timeout : number
 ) : SearchResult<Node> {
-  var toVisit : [Node];
-    // A dummy search result: it just picks the first possible neighbour
+    var toVisit : collections.Set<Node>;
+    var visited : collections.Set<Node>;
+    var stepBefore : Array<Node> = new Array<Node>();
+    var costs : collections.Dictionary<Node, number>;
+
+    toVisit.add(start);
+    costs.setValue(start, 0);
+
     // SearchResult should contain cheapest path from the start node to every other node
     // including the goal node
     var result : SearchResult<Node> = {
         path: [start],
         cost: 0
     };
-    while (result.path.length < 3) {
+    while (!goal(toVisit[0])) { // null check needed
+
+        var current : Node = getNext(toVisit, costs); // first node in queue
+        visited.add(current);
+        for (var neighbour of graph.outgoingEdges(current)) {
+          var cost = getValue(costs, current) + getValue(costs, (neighbour.to));
+          if (toVisit.contains(neighbour.to) && cost < getValue(costs, (neighbour.to))) {
+            toVisit.remove(neighbour.to);
+          }
+        }
+        if (goal(current)) {
+            return null //getPath(stepBefore, current);
+        }
         var edge : Edge<Node> = graph.outgoingEdges(start) [0];
         if (! edge) break;
         start = edge.to;
@@ -71,6 +91,36 @@ function aStarSearch<Node> (
         result.cost += edge.cost;
     }
     return result;
+}
+
+function getNext<Node> (
+  nodes : collections.Set<Node>,
+  costs : collections.Dictionary<Node, number> )
+  : Node {
+    var result : Node;
+    nodes.forEach( node => {
+      if (getValue(costs,node) < getValue(costs, result)) {
+        result = node;
+        }
+    });
+    return result;
+  }
+
+  function getValue<Node> (
+    dict : collections.Dictionary<Node,number>,
+    key : Node )
+    : number {
+      var result = dict.getValue(key);
+      return result !== undefined ? result : Infinity;
+    }
+
+function getPath (
+  from : Node[],
+  to : Node )
+  : SearchResult<Node> {
+
+    return null;
+
 }
 
 
