@@ -57,13 +57,14 @@ function aStarSearch<Node, Edge> (
     heuristics : (n:Node) => number,
     timeout : number
 ) : SearchResult<Node> {
-    var toVisit : collections.Set<Node>;
-    var visited : collections.Set<Node>;
-    var stepBefore : collections.Dictionary<Node,Node>;
-    var costs : collections.Dictionary<Node,number>;
+    var toVisit = new collections.Set<Node>();
+    var visited = new collections.Set<Node>();
+    var stepBefore = new collections.Dictionary<Node,Node>();
+    var costs = new collections.Dictionary<Node,number>();
 
     toVisit.add(start);
     costs.setValue(start, 0);
+    console.log("hehehehehe");
 
     // SearchResult should contain cheapest path from the start node to every other node
     // including the goal node
@@ -72,11 +73,13 @@ function aStarSearch<Node, Edge> (
         cost: 0
     };
     while (!goal(getNext(toVisit, costs, heuristics))) { // null check needed
-        var current : Node = getNext(toVisit, costs, heuristics); // first node in queue
+        var current = getNext(toVisit, costs, heuristics); // first node in queue
+        console.log("current: " + current.toString());
         visited.add(current);
+        toVisit.remove(current);
         for (var edge of graph.outgoingEdges(current)) {
               var neighbour = edge.to;
-              var cost = getValue(costs, current) + getValue(costs, neighbour);
+              var cost = getValue(costs, current) + edge.cost;
               if (toVisit.contains(neighbour) && cost < getValue(costs, neighbour)) {
                   toVisit.remove(neighbour);
               }
@@ -87,19 +90,25 @@ function aStarSearch<Node, Edge> (
               if (!toVisit.contains(neighbour) && !visited.contains(neighbour)) { // refacror
                   costs.setValue(neighbour, cost);
                   toVisit.add(neighbour);
+                  console.log("ny kompis!")
                   stepBefore.setValue(neighbour, current);
               }
           }
+          console.log("toVisit: " + toVisit.toString());
+          console.log("Nästa nod i toVisit:");
+          console.log("getNext: " + getNext(toVisit, costs, heuristics));
       }
       result.path.push(getNext(toVisit, costs, heuristics));
       var backPropNode = result.path[0];
       result.cost = costs.getValue(backPropNode);
-      while (backPropNode !== start) {
+
+      while (backPropNode.toString() !== start.toString()) {
           var next = stepBefore.getValue(backPropNode);
-          [next].concat(result.path);
+          result.path.unshift(next);
           backPropNode = next;
       }
-    return result;
+      console.log(result.path[0].toString());
+      return result;
 }
 
 function getNext<Node> (
@@ -107,9 +116,13 @@ function getNext<Node> (
   costs : collections.Dictionary<Node, number>,
   heuristics : (n:Node) => number)
   : Node {
-    var result : Node;
+    var result : Node; //take first element to have something to start with to prevent null
     nodes.forEach( node => {
+      if (result == undefined) {
+        result = node;
+      }
       if (getValue(costs, node) + heuristics(node) < getValue(costs, result) + heuristics(result)) {
+        //console.log("in if")
         result = node;
         }
     });
