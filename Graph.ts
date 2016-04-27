@@ -64,7 +64,6 @@ function aStarSearch<Node, Edge> (
 
     toVisit.add(start);
     costs.setValue(start, 0);
-    console.log("hehehehehe");
 
     // SearchResult should contain cheapest path from the start node to every other node
     // including the goal node
@@ -74,7 +73,6 @@ function aStarSearch<Node, Edge> (
     };
     while (!goal(getNext(toVisit, costs, heuristics))) { // null check needed
         var current = getNext(toVisit, costs, heuristics); // first node in queue
-        console.log("current: " + current.toString());
         visited.add(current);
         toVisit.remove(current);
         for (var edge of graph.outgoingEdges(current)) {
@@ -90,13 +88,9 @@ function aStarSearch<Node, Edge> (
               if (!toVisit.contains(neighbour) && !visited.contains(neighbour)) { // refacror
                   costs.setValue(neighbour, cost);
                   toVisit.add(neighbour);
-                  console.log("ny kompis!")
                   stepBefore.setValue(neighbour, current);
               }
           }
-          console.log("toVisit: " + toVisit.toString());
-          console.log("Nästa nod i toVisit:");
-          console.log("getNext: " + getNext(toVisit, costs, heuristics));
       }
       result.path.push(getNext(toVisit, costs, heuristics));
       var backPropNode = result.path[0];
@@ -107,7 +101,6 @@ function aStarSearch<Node, Edge> (
           result.path.unshift(next);
           backPropNode = next;
       }
-      console.log(result.path[0].toString());
       return result;
 }
 
@@ -122,7 +115,6 @@ function getNext<Node> (
         result = node;
       }
       if (getValue(costs, node) + heuristics(node) < getValue(costs, result) + heuristics(result)) {
-        //console.log("in if")
         result = node;
         }
     });
@@ -136,4 +128,3 @@ function getNext<Node> (
       var result = dict.getValue(key);
       return result !== undefined ? result : Infinity;
     }
-
