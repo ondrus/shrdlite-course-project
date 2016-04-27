@@ -50,7 +50,7 @@ class SearchResult<Node> {
 * @param timeout Maximum time to spend performing A\* search.
 * @returns A search result, which contains the path from `start` to a node satisfying `goal` and the cost of this path.
 */
-function aStarSearch<Node> (
+function aStarSearch<Node, Edge> (
     graph : Graph<Node>,
     start : Node,
     goal : (n:Node) => boolean,
@@ -59,8 +59,8 @@ function aStarSearch<Node> (
 ) : SearchResult<Node> {
     var toVisit : collections.Set<Node>;
     var visited : collections.Set<Node>;
-    var stepBefore : Array<Node> = new Array<Node>();
-    var costs : collections.Dictionary<Node, number>;
+    var stepBefore : collections.Dictionary<Node,Node>;
+    var costs : collections.Dictionary<Node,number>;
 
     toVisit.add(start);
     costs.setValue(start, 0);
@@ -68,38 +68,48 @@ function aStarSearch<Node> (
     // SearchResult should contain cheapest path from the start node to every other node
     // including the goal node
     var result : SearchResult<Node> = {
-        path: [start],
+        path: [],
         cost: 0
     };
-    while (!goal(toVisit[0])) { // null check needed
-
-        var current : Node = getNext(toVisit, costs); // first node in queue
+    while (!goal(getNext(toVisit, costs, heuristics))) { // null check needed
+        var current : Node = getNext(toVisit, costs, heuristics); // first node in queue
         visited.add(current);
-        for (var neighbour of graph.outgoingEdges(current)) {
-          var cost = getValue(costs, current) + getValue(costs, (neighbour.to));
-          if (toVisit.contains(neighbour.to) && cost < getValue(costs, (neighbour.to))) {
-            toVisit.remove(neighbour.to);
+        for (var edge of graph.outgoingEdges(current)) {
+              var neighbour = edge.to;
+              var cost = getValue(costs, current) + getValue(costs, neighbour);
+              if (toVisit.contains(neighbour) && cost < getValue(costs, neighbour)) {
+                  toVisit.remove(neighbour);
+              }
+              if (visited.contains(neighbour) && cost < getValue(costs, neighbour)) { // should never happen
+                  visited.remove(neighbour);
+                  toVisit.add(neighbour); // perhaps add to toVisit again??
+              }
+              if (!toVisit.contains(neighbour) && !visited.contains(neighbour)) { // refacror
+                  costs.setValue(neighbour, cost);
+                  toVisit.add(neighbour);
+                  stepBefore.setValue(neighbour, current);
+              }
           }
-        }
-        if (goal(current)) {
-            return null //getPath(stepBefore, current);
-        }
-        var edge : Edge<Node> = graph.outgoingEdges(start) [0];
-        if (! edge) break;
-        start = edge.to;
-        result.path.push(start);
-        result.cost += edge.cost;
-    }
+      }
+      result.path.push(getNext(toVisit, costs, heuristics));
+      var backPropNode = result.path[0];
+      result.cost = costs.getValue(backPropNode);
+      while (backPropNode !== start) {
+          var next = stepBefore.getValue(backPropNode);
+          [next].concat(result.path);
+          backPropNode = next;
+      }
     return result;
 }
 
 function getNext<Node> (
   nodes : collections.Set<Node>,
-  costs : collections.Dictionary<Node, number> )
+  costs : collections.Dictionary<Node, number>,
+  heuristics : (n:Node) => number)
   : Node {
     var result : Node;
     nodes.forEach( node => {
-      if (getValue(costs,node) < getValue(costs, result)) {
+      if (getValue(costs, node) + heuristics(node) < getValue(costs, result) + heuristics(result)) {
         result = node;
         }
     });
@@ -113,16 +123,6 @@ function getNext<Node> (
       var result = dict.getValue(key);
       return result !== undefined ? result : Infinity;
     }
-
-function getPath (
-  from : Node[],
-  to : Node )
-  : SearchResult<Node> {
-
-    return null;
-
-}
-
 
 //////////////////////////////////////////////////////////////////////
 // here is an example graph
