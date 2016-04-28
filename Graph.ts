@@ -61,17 +61,19 @@ function aStarSearch<Node, Edge> (
     var visited = new collections.Set<Node>();
     var stepBefore = new collections.Dictionary<Node,Node>();
     var costs = new collections.Dictionary<Node,number>();
-
-    toVisit.add(start);
-    costs.setValue(start, 0);
-
     // SearchResult should contain cheapest path from the start node to every other node
     // including the goal node
     var result : SearchResult<Node> = {
         path: [],
         cost: 0
     };
+    var iterations = 0;
+
+    toVisit.add(start);
+    costs.setValue(start, 0);
+
     while (!goal(getNext(toVisit, costs, heuristics))) { // null check needed
+      iterations ++ ;
         var current = getNext(toVisit, costs, heuristics); // first node in queue
         visited.add(current);
         toVisit.remove(current);
@@ -92,6 +94,7 @@ function aStarSearch<Node, Edge> (
               }
           }
       }
+      // reconstruct path
       result.path.push(getNext(toVisit, costs, heuristics));
       var backPropNode = result.path[0];
       result.cost = costs.getValue(backPropNode);
@@ -101,6 +104,7 @@ function aStarSearch<Node, Edge> (
           result.path.unshift(next);
           backPropNode = next;
       }
+      console.log("number of iteration: " + iterations);
       return result;
 }
 
