@@ -26,6 +26,10 @@ aStarTests: Graph.ts Test.ts
 	$(TSC) --out Test.js Graph.ts Test.ts
 	node Test.js
 
+simpleTest: Graph.ts SimpleTest.ts
+	$(TSC) --out SimpleTest.js Graph.ts SimpleTest.ts
+	node SimpleTest.js
+
 %.js: %.ts $(TSFILES)
 	$(TSC) --out $@ $<
 

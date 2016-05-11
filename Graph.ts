@@ -55,18 +55,118 @@ function aStarSearch<Node> (
     heuristics : (n:Node) => number,
     timeout : number
 ) : SearchResult<Node> {
-    // A dummy search result: it just picks the first possible neighbour
+
     var result : SearchResult<Node> = {
         path: [start],
         cost: 0
     };
-    while (result.path.length < 3) {
-        var edge : Edge<Node> = graph.outgoingEdges(start) [0];
-        if (! edge) break;
-        start = edge.to;
-        result.path.push(start);
-        result.cost += edge.cost;
+
+    var currentNode : Node = start;
+    var currentEdge : Edge<Node>;
+    var neighbourEs : Edge<Node> [];
+    var searchPath : Edge<Node> [];
+    var queue = new collections.PriorityQueue<Edge<Node>>(function(e1 : Edge<Node>, e2 : Edge<Node>){
+        var cost1 = e1.cost + heuristics(e1.to);
+        var cost2 = e2.cost + heuristics(e2.to);
+        if(cost1 < cost2){
+            return 1;
+        }else if(cost1 > cost2){
+            return -1;
+        }else{
+            return 0;
+        }
+    });
+    var it = 0;
+    searchPath = [];
+    while(!goal(currentNode)){
+        it = it + 1;
+        neighbourEs = graph.outgoingEdges(currentNode);
+        console.log("nEs: " + neighbourEs.toString());
+        console.log(it.toString());
+        //put all the edges connected to current node in priorityqueue
+        var currentPathCost = searchPath.reduce((acc, e) => acc + e.cost, 0);
+        neighbourEs.forEach(function(e : Edge<Node>){
+            var updatedEdge = new Edge<Node>();
+            updatedEdge.to = e.to;
+            updatedEdge.from = e.from;
+            updatedEdge.cost = e.cost + currentPathCost;
+            queue.add(updatedEdge);
+            /**console.log("added to queue, from: " + (updatedEdge.from).toString());
+            console.log("added to queue, to: " + (updatedEdge.to).toString());
+            console.log("added to queue, cost: " + (updatedEdge.cost).toString());
+            console.log("added to queue, from heur: " + heuristics(updatedEdge.to));*/
+
+        });
+        queue.enqueue
+
+        //get first element
+        /**
+var queueString = "\n";
+var arr : Edge<Node> [] = [];
+
+while(!queue.isEmpty()){
+    arr.push(queue.dequeue());
+}
+
+arr.forEach(function (e : Edge<Node>) {
+  queueString += " f " + e.from.toString() + " t " + e.to.toString() + " c " + e.cost.toString() + "\n";
+  queue.add(e);
+});
+
+        console.log("queue after adding", queueString);*/
+
+        currentEdge = queue.dequeue();
+        //console.log("currEdge from: " + (currentEdge.from).toString());
+        //console.log("currEdge to: " + (currentEdge.to).toString());
+
+        currentNode = currentEdge.to;
+        //console.log("currNode : " + currentNode.toString());
+        //console.log("searchpath length: " + (searchPath.length).toString());
+
+        if(searchPath.length == 0){
+            searchPath[0] = currentEdge;
+          //  console.log("search path, one element, from: " +
+            //    (searchPath[0].from).toString());
+          //  console.log("search path, one element, to: " +
+              //  (searchPath[0].to).toString());
+        }else{
+
+            var cond = true;
+            var i = 0;
+
+            //check if the from node already has an edge connected to it, if so,
+            //remove all the edges added after that node
+
+            //console.log(searchPath);
+            while(cond && (i < searchPath.length)){
+                //console.log("inner while: " + i.toString());
+                //console.log((searchPath[i]));
+                if((searchPath[i].from).toString() === (currentEdge.from).toString()){
+                    //console.log("current from node already exists in searchpath: " +
+                    //    (searchPath[i].from).toString() + " " + (currentEdge.from).toString());
+                    searchPath = searchPath.slice(0,i);
+                    cond = false;
+
+                }
+                i = i + 1;
+            }
+            //if the node is not previously traversed, just add the edge at the end of the path
+            searchPath[i-1] = currentEdge;
+            //console.log("currentEdge added to searchPath, from: " + (searchPath[i-1].from).toString());
+            //console.log("currentEdge added to searchPath, to: " + (searchPath[i-1].to).toString());
+        }
+
     }
+    //console.log(it.toString());
+
+    var count : number;
+    for(count = 0; count < searchPath.length; count++){
+        result.path[count+1] = searchPath[count].to;
+        //skrivs ej ut:
+        console.log("in for loop, create path, node: " + result.path[count+1]);
+        result.cost = result.cost + searchPath[count].cost;
+    }
+
     return result;
 }
 
@@ -154,6 +254,32 @@ class GridGraph implements Graph<GridNode> {
             str += "|";
             for (var x = 0; x < this.size.x; x++) {
                 str += this.walls.contains(new GridNode({x:x,y:y})) ? "## " : "   ";
+            }
+            str += "|\n";
+            if (y > 0) str += betweenRow + "\n";
+        }
+        str += borderRow + "\n";
+        return str;
+    }
+
+    drawPath(start : TestNode, goal : TestNode, path : TestNode[]) : string {
+	function pathContains(path : TestNode[], n : TestNode) : boolean {
+	    for (var p of path) {
+		if (p.pos.x == n.pos.x && p.pos.y == n.pos.y)
+		    return true;
+	    }
+	    return false;
+	}
+	var borderRow = "+" + new Array(this.size.x + 1).join("--+");
+        var betweenRow = "+" + new Array(this.size.x + 1).join("  +");
+        var str = "\n" + borderRow + "\n";
+        for (var y = this.size.y-1; y >= 0; y--) {
+            str += "|";
+            for (var x = 0; x < this.size.x; x++) {
+                str += this.walls.contains(new TestNode({x:x,y:y})) ? "## " :
+		    (x == start.pos.x && y == start.pos.y ? " S " :
+		     (x == goal.pos.x && y == goal.pos.y ? " G " :
+		      ((pathContains(path, new TestNode({x:x,y:y})) ? ' * ' : "   "))));
             }
             str += "|\n";
             if (y > 0) str += betweenRow + "\n";

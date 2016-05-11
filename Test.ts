@@ -19,7 +19,7 @@ class TestNode {
     compareTo(other : TestNode) : number {
         return (this.pos.x - other.pos.x) || (this.pos.y - other.pos.y);
     }
-    
+
     toString() : string {
         return "(" + this.pos.x + "," + this.pos.y + ")";
     }
@@ -50,7 +50,7 @@ class TestGrid implements Graph<TestNode> {
 
     outgoingEdges(node : TestNode) : Edge<TestNode>[] {
         var outgoing : Edge<TestNode>[] = [];
-        for (var dx = -1; dx <= 1; dx++){ 
+        for (var dx = -1; dx <= 1; dx++){
             for (var dy = -1; dy <= 1; dy++) {
 	    if (! (dx*dx == dy*dy)) {
                     var next = node.add({x:dx, y:dy});
@@ -113,7 +113,7 @@ class TestGrid implements Graph<TestNode> {
         }
         str += borderRow + "\n";
         return str;
-    }    
+    }
 }
 
 interface TestCase {
@@ -167,15 +167,15 @@ function test(c: TestCase) : boolean {
 		return true;
 	    else
 		console.log("The result is not a path of optimal length from " + start + " to the goal!");
-	    
+
 	    console.log("Test failed!");
-	    
+
 	    console.log("Start: " + start.toString());
 	    console.log("Goal: " + goal.toString());
 	    console.log(g.drawPath(start, goal, result.path));
 	    console.log("Result: " + result.path);
 	    console.log("Cost: " + result.cost);
-	    
+
 	    console.log("Expected path: ")
 	    var s = "";
 	    for (var i of c.path) {
@@ -187,11 +187,11 @@ function test(c: TestCase) : boolean {
 	}
     } catch (e) {
 	console.log("Test failed! No path found");
-	
+	console.log(e);
 	console.log("Start: " + start.toString());
 	console.log("Goal: " + goal.toString());
 	console.log(g.toString(start, goal));
-	
+
 	console.log("Expected path: " + c.path);
 	console.log("Expected cost: " + c.cost);
     }
