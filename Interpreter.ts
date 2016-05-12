@@ -3,12 +3,12 @@
 
 /**
 * Interpreter module
-* 
+*
 * The goal of the Interpreter module is to interpret a sentence
 * written by the user in the context of the current world state. In
 * particular, it must figure out which objects in the world,
 * i.e. which elements in the `objects` field of WorldState, correspond
-* to the ones referred to in the sentence. 
+* to the ones referred to in the sentence.
 *
 * Moreover, it has to derive what the intended goal state is and
 * return it as a logical formula described in terms of literals, where
@@ -34,7 +34,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 * @param parses List of parses produced by the Parser.
 * @param currentState The current state of the world.
 * @returns Augments ParseResult with a list of interpretations. Each interpretation is represented by a list of Literals.
-*/    
+*/
     export function interpret(parses : Parser.ParseResult[], currentState : WorldState) : InterpretationResult[] {
         var errors : Error[] = [];
         var interpretations : InterpretationResult[] = [];
@@ -76,7 +76,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         polarity : boolean;
 	/** The name of the relation in question. */
         relation : string;
-	/** The arguments to the relation. Usually these will be either objects 
+	/** The arguments to the relation. Usually these will be either objects
      * or special strings such as "floor" or "floor-N" (where N is a column) */
         args : string[];
     }
@@ -106,6 +106,15 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
      * @returns A list of list of Literal, representing a formula in disjunctive normal form (disjunction of conjunctions). See the dummy interpetation returned in the code for an example, which means ontop(a,floor) AND holding(b).
      */
     function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
+        console.log("************" + cmd);
+        var X = cmd.entity.object;
+        var domainX : string[] = Object.keys(state.objects);
+        domainX = cleanSet(X, domainX, state); // unary contraints OK iin this set
+        var binConst = cmd.location.relation;
+
+        var target = cmd.location.entity.object;
+        var formula : DNFFormula = [];
+
         // This returns a dummy interpretation involving two random objects in the world
         var objects : string[] = Array.prototype.concat.apply([], state.stacks);
         var a : string = objects[Math.floor(Math.random() * objects.length)];
@@ -117,5 +126,24 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         return interpretation;
     }
 
-}
+    function cleanSet(X : Parser.Object, domainX : string[], state : WorldState) : string[] {
+        var temp = [];
+        domainX.forEach(key => {
+        var obj = state.objects[key];
+        if (!((X.form === undefined || X.form === obj.form) &&
+            (X.size === undefined || X.size === obj.size) &&
+            (X.color === undefined || X.color === obj.color))){
+          temp.push(key);
+        }
+      });
+      return temp;
+    }
 
+    function createFormulaPart(sourceKey : string, targetKey : string, relation : string, polarity = true) : Literal {
+      var args = [sourceKey];
+      if (targetKey !== undefined) {
+        args.push(targetKey);
+      }
+      return {polarity: polarity, relation: relation, args: args};
+    }
+}
