@@ -245,8 +245,9 @@ module Interpreter {
         var curr = entity.object;
         //console.log("Init resolveEnitityKeys");
         while(curr.location){
-            //console.log("loop ");
+            console.log("current object: " + curr);
             console.log("relation:", curr.location.relation);
+            console.log("location object:", curr.location.entity.object);
             keySets.push(resolveUnaryKeys(curr.object, state));
 
             binaryConstraintSets.push(curr.location.relation);
@@ -279,8 +280,8 @@ module Interpreter {
 
         var keys : string [] = [];
         if(constraint === "ontop") {
-            keys.push("floor");
-            curr.push("floor");
+            //keys.push("floor");
+            //curr.push("floor");
             state.objects["floor"] = {"form":"floor", "size":"floor", "color":"floor"};
         }
 
@@ -407,6 +408,9 @@ module Interpreter {
     function resolveUnaryKeys(needle : Parser.Object, state: WorldState){
         console.log("resolveUnaryKeys needle", needle);
         var allKeys = getAllRelevantKeys(state);
+        if(needle.form === "floor"){
+          return["floor"];
+        }
 
         //state.objects["floor"] = {"form":"floor", "size":"floor", "color":"floor"};
         var possibleKeys : string [] = [];
