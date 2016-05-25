@@ -77,6 +77,26 @@ module Interpreter {
 
   //////////////////////////////////////////////////////////////////////
   // private functions
+  function interpretTakeCase(cmd:Parser.Command, state:WorldState){
+      var keys = resolveEntityKeys(cmd.entity, state);
+      var valid = keys.filter(k => k !== "floor");
+      if(valid.length === 0) {
+        throw "No interpretations found";
+      }
+      return valid.map(validKey => [{polarity:true, relation:"holding", args: [validKey]}]);
+  }
+
+  function interpretMoveCase(cmd:Parser.Command, state:WorldState) {
+    var keys = resolveEntityKeys(cmd.entity, state);
+    var keysLocation = resolveEntityKeys(cmd.location.entity, state);
+    var validTuples = filterValidPairs(keys, keysLocation, cmd.location.relation, state);
+    if(validTuples.length === 0) {
+      throw "No interpretations found";
+    }
+    return validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
+  }
+
+
   /**
   * The core interpretation function.
   * Analyses cmd in order to figure out what interpretation to return.
@@ -85,26 +105,41 @@ module Interpreter {
   * @returns A list of list of Literal, representing a formula in disjunctive normal form.
   */
   function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
-    var interpretation : DNFFormula = [];
-    if (cmd.command === "take"){
-      var keys = resolveEntityKeys(cmd.entity, state);
-      for(var key of keys) {
-        interpretation.push([{polarity:true, relation:"holding",
-        args: [key]}]);
+    if (cmd.command === "take") {
+      return interpretTakeCase(cmd, state);
+    } else if (cmd.command === "move") {
+      return interpretMoveCase(cmd, state);
+    } else {
+      throw "Invalid command";
+    }
+  }
+
+
+    /** Resolves all the relevant keys for this entety.
+     * @param entity The entity to resolve keys from.
+     * @param state The current state of the world.
+     * @returns A list of keys
+     */
+    function resolveEntityKeys(entity: Parser.Entity, state: WorldState): string [] {
+      var obj = entity.object;
+      if(obj.location) {
+        var entityKeys = resolveEntityKeys(obj.location.entity, state);
+        var relation = obj.location.relation;
+        var objKeys = resolveObjectKeys(obj, state);
+        return checkBinaryConstraint(entityKeys, objKeys, relation, state);
+      } else {
+        return resolveUnaryKeys(obj, state);
       }
-    } else if(cmd.command === "move"){
-      var keys = resolveEntityKeys(cmd.entity, state);
-      var keysLocation = resolveEntityKeys(cmd.location.entity, state);
-      var tuples = filterValidPairs(keys, keysLocation, cmd.location.relation, state);
-      if(tuples.length === 0) {
-        throw "No interpretations found";
+    }
+
+    function resolveObjectKeys(object : Parser.Object, state: WorldState): string [] {
+      if(object.location) {
+        var objKeys = resolveObjectKeys(object.object, state);
+        var entityKeys = resolveEntityKeys(object.location.entity, state);
+        return checkBinaryConstraint(entityKeys, objKeys, object.location.relation, state);
+      } else {
+        return resolveUnaryKeys(object, state);
       }
-      for(var pair of tuples){
-        interpretation.push([{polarity:true, relation:cmd.location.relation,
-          args: pair}]);
-        }
-      }
-      return interpretation;
     }
 
     /**
@@ -174,29 +209,6 @@ module Interpreter {
         default:
         throw "Unkown size: " + size;
       }
-    }
-
-    /** Resolves all the relevant keys for this entety.
-    * @param entety The entety to resolve keys from.
-    * @param state The current state of the world.
-    * @returns A list of keys
-    */
-    function resolveEntityKeys(entity: Parser.Entity, state: WorldState): string [] {
-      var keys = getAllRelevantKeys(state);
-      var keySets = [keys];
-      var binaryConstraintSets : string [] = [];
-      var curr = entity.object;
-      while(curr.location){
-        keySets.push(resolveUnaryKeys(curr.object, state));
-        binaryConstraintSets.push(curr.location.relation);
-        curr = curr.location.entity.object;
-      }
-      var currentKeys = resolveUnaryKeys(curr, state);
-      while(binaryConstraintSets.length > 0){
-        var nextKeys = keySets.pop();
-        currentKeys = checkBinaryConstraint(currentKeys, nextKeys, binaryConstraintSets.pop(), state);
-      }
-      return currentKeys;
     }
 
     /** Checks the binary constraints between the objects.
