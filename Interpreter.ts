@@ -165,7 +165,10 @@ module Interpreter {
             }
             break;
             case "ontop":
-            if(canPlaceOnTop(sk, fk, state)){
+            /*if(canPlaceOnTop(fk, sk, state)){
+              pairs.push([fk, sk]);
+            }*/
+            if(sk === "floor" || (state.objects[fk].form !== "ball" && canPlaceOnTop(fk, sk, state))){
               pairs.push([fk, sk]);
             }
             break;
@@ -209,16 +212,6 @@ module Interpreter {
       var fForm = state.objects[fk].form;
       var sForm = state.objects[sk].form;
 
-      if(fForm === "ball"){
-        if(sForm === "floor"){
-          return true;
-        }else if(sForm === "box"){
-          return boxCanHoldObject(sk, fk, state);
-        }else{
-          return false;
-        }
-      }
-
       if(fSize > sSize || sForm === "ball"){
         return false;
       }else if(fForm === "box"){
@@ -227,9 +220,8 @@ module Interpreter {
         }else if(sForm === "brick" && fSize === convertSizeToInt("small")){
           return false;
         }
-      }else{
-        return true;
       }
+      return true;
 
     }
 
