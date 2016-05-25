@@ -1,5 +1,6 @@
 ///<reference path="World.ts"/>
 ///<reference path="Interpreter.ts"/>
+///<reference path="Graph.ts"/>
 
 /** 
 * Planner module
@@ -11,6 +12,91 @@
 *
 * The planner should use your A* search implementation to find a plan.
 */
+
+class WorldGraph implements Graph<WorldState> {
+
+    private start : WorldState;
+    constructor(state : WorldState) {
+        this.start = state;
+    }
+
+    outgoingEdges(node : WorldState): Edge<WorldState>[]  {
+        var edges = [];
+        if(node.holding === null) {
+            if(node.stacks[node.arm]){
+                edges.push(this.createPickUpActionEdge(node))
+            }
+        } else {
+            edges.push(this.createDropActionEdge(node))
+        }
+
+        if(node.arm > 0) {
+            edges.push(this.createLeftMoveActionEdge(node))
+        }
+
+        if (node.arm < node.stacks.length - 1) {
+            edges.push(this.createRightMoveActionEdge(node))
+        }
+
+        return edges;
+    }
+
+    compareNodes(s1 : WorldState, s2 : WorldState) : number {
+        if (JSON.stringify(s1) === JSON.stringify(s2)) {
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
+    private createPickUpActionEdge(node : WorldState) {
+        var e = new Edge();
+        e.cost = 1;
+        e.from = node;
+        var toNode = copyWorld(node);
+        toNode.holding = toNode.stacks[toNode.arm].pop();
+        e.to = toNode;
+        return e;
+    }
+
+    private createDropActionEdge(node : WorldState) {
+        var e = new Edge();
+        e.cost = 1;
+        e.from = node;
+        var toNode = copyWorld(node);
+        toNode.stacks[toNode.arm].push(toNode.holding);
+        toNode.holding = null;
+        return e;
+    }
+
+    private createLeftMoveActionEdge(node : WorldState) {
+        var e = new Edge();
+        e.cost = 1;
+        e.from = node;
+        var toNode = copyWorld(node);
+        toNode.arm--;
+        e.to = toNode;
+        return e;
+    }
+
+    private createRightMoveActionEdge(node : WorldState) {
+        var e = new Edge();
+        e.cost = 1;
+        e.from = node;
+        var toNode = copyWorld(node);
+        toNode.arm++;
+        e.to = toNode;
+        return e;
+    }
+
+
+    
+}
+
+function copyWorld(s : WorldState) : WorldState {
+    return JSON.parse(JSON.stringify(s));
+}
+    
 module Planner {
 
     //////////////////////////////////////////////////////////////////////
