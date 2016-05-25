@@ -159,12 +159,13 @@ module Interpreter {
           }
           switch(relation) {
             case "inside":
-            if(state.objects[sk].form === "box" && state.objects[fk].form !== "floor" && boxCanHoldObject(sk, fk, state)){
+            if(state.objects[sk].form === "box" && state.objects[fk].form !==
+              "floor" && boxCanHoldObject(sk, fk, state)){
               pairs.push([fk, sk]);
             }
             break;
             case "ontop":
-            if(sk === "floor" || state.objects[fk].form !== "ball"){
+            if(canPlaceOnTop(sk, fk, state)){
               pairs.push([fk, sk]);
             }
             break;
@@ -189,9 +190,47 @@ module Interpreter {
     * @returns True if the object fits in the box.
     */
     function boxCanHoldObject(boxKey : string, objectKey : string, state : WorldState) : boolean {
-      var boxSize = state.objects[boxKey].size;
-      var objectSize = state.objects[objectKey].size;
-      return convertSizeToInt(boxSize) >= convertSizeToInt(objectSize);
+      var boxSize = convertSizeToInt(state.objects[boxKey].size);
+      var objectSize = convertSizeToInt(state.objects[objectKey].size);
+      var form = state.objects[objectKey].form;
+      if(form === "pyramid" || form === "plank" || form === "box"){
+        return boxSize > objectSize;
+      }else if(form === "ball"){
+        return boxSize >= objectSize;
+      }else{
+        return false;
+      }
+
+    }
+
+    function canPlaceOnTop(fk : string, sk : string, state : WorldState) : boolean {
+      var fSize = convertSizeToInt(state.objects[fk].size);
+      var sSize = convertSizeToInt(state.objects[sk].size);
+      var fForm = state.objects[fk].form;
+      var sForm = state.objects[sk].form;
+
+      if(fForm === "ball"){
+        if(sForm === "floor"){
+          return true;
+        }else if(sForm === "box"){
+          return boxCanHoldObject(sk, fk, state);
+        }else{
+          return false;
+        }
+      }
+
+      if(fSize > sSize || sForm === "ball"){
+        return false;
+      }else if(fForm === "box"){
+        if(sForm === "pyramid"){
+          return !(sSize === fSize);
+        }else if(sForm === "brick" && fSize === convertSizeToInt("small")){
+          return false;
+        }
+      }else{
+        return true;
+      }
+
     }
 
     /**
@@ -265,7 +304,7 @@ module Interpreter {
             break;
             case "under" :
             if(nkInd === ckInd){
-              if(find(nk, state.stacks[nkInd]) + 1 === find(ck, state.stacks[nkInd])){
+              if(find(nk, state.stacks[nkInd]) > find(ck, state.stacks[nkInd])){
                 keys.push(nk);
               }
             }
