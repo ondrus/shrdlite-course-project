@@ -83,6 +83,7 @@ module Interpreter {
       if(valid.length === 0) {
         throw "No interpretations found";
       }
+
       return valid.map(validKey => [{polarity:true, relation:"holding", args: [validKey]}]);
   }
 
@@ -323,7 +324,7 @@ module Interpreter {
     * Returns the position of an element in a list.
     * Returns -1 if the object does not exist in the list.
     */
-    function find(needle : string, hayStack : string []) : number {
+    export function find(needle : string, hayStack : string []) : number {
       for(var i = 0; i < hayStack.length; i++){
         if(hayStack[i] === needle){
           return i;
@@ -336,7 +337,7 @@ module Interpreter {
     * Returns the position of a object in a stack given the world state.
     * Returns -1 if the object does not exist in the stack.
     */
-    function findStackIndex(needle : string, state: WorldState) : number {
+    export function findStackIndex(needle : string, state: WorldState) : number {
       for(var i = 0; i < state.stacks.length; i++){
         for(var s of state.stacks[i]){
           if(s === needle){
