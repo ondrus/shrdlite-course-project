@@ -83,6 +83,7 @@ module Interpreter {
       if(valid.length === 0) {
         throw "No interpretations found";
       }
+
       return valid.map(validKey => [{polarity:true, relation:"holding", args: [validKey]}]);
   }
 
@@ -93,7 +94,10 @@ module Interpreter {
     if(validTuples.length === 0) {
       throw "No interpretations found";
     }
-    return validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
+
+    var formula : DNFFormula = validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
+    //(console.log(formula);
+    return formula;
   }
 
 
@@ -159,12 +163,16 @@ module Interpreter {
           }
           switch(relation) {
             case "inside":
-            if(state.objects[sk].form === "box" && state.objects[fk].form !== "floor" && boxCanHoldObject(sk, fk, state)){
+            if(state.objects[sk].form === "box" && state.objects[fk].form !==
+              "floor" && boxCanHoldObject(sk, fk, state)){
               pairs.push([fk, sk]);
             }
             break;
             case "ontop":
-            if(sk === "floor" || state.objects[fk].form !== "ball"){
+            /*if(canPlaceOnTop(fk, sk, state)){
+              pairs.push([fk, sk]);
+            }*/
+            if(sk === "floor" || (state.objects[fk].form !== "ball" && canPlaceOnTop(fk, sk, state))){
               pairs.push([fk, sk]);
             }
             break;
@@ -189,9 +197,36 @@ module Interpreter {
     * @returns True if the object fits in the box.
     */
     function boxCanHoldObject(boxKey : string, objectKey : string, state : WorldState) : boolean {
-      var boxSize = state.objects[boxKey].size;
-      var objectSize = state.objects[objectKey].size;
-      return convertSizeToInt(boxSize) >= convertSizeToInt(objectSize);
+      var boxSize = convertSizeToInt(state.objects[boxKey].size);
+      var objectSize = convertSizeToInt(state.objects[objectKey].size);
+      var form = state.objects[objectKey].form;
+      if(form === "pyramid" || form === "plank" || form === "box"){
+        return boxSize > objectSize;
+      }else if(form === "ball"){
+        return boxSize >= objectSize;
+      }else{
+        return false;
+      }
+
+    }
+
+    function canPlaceOnTop(fk : string, sk : string, state : WorldState) : boolean {
+      var fSize = convertSizeToInt(state.objects[fk].size);
+      var sSize = convertSizeToInt(state.objects[sk].size);
+      var fForm = state.objects[fk].form;
+      var sForm = state.objects[sk].form;
+
+      if(fSize > sSize || sForm === "ball"){
+        return false;
+      }else if(fForm === "box"){
+        if(sForm === "pyramid"){
+          return !(sSize === fSize);
+        }else if(sForm === "brick" && fSize === convertSizeToInt("small")){
+          return false;
+        }
+      }
+      return true;
+
     }
 
     /**
@@ -218,7 +253,7 @@ module Interpreter {
     * @param state The current state of the world.
     * @returns A list of keys fullfilling the constraint
     */
-    function checkBinaryConstraint(curr : string [], next : string [], constraint: string, state : WorldState): string []{
+    export function checkBinaryConstraint(curr : string [], next : string [], constraint: string, state : WorldState): string []{
       //leftof rightof inside ontop under beside above
       //for every key in next, check relation with every key in curr
       var keys : string [] = [];
@@ -265,7 +300,7 @@ module Interpreter {
             break;
             case "under" :
             if(nkInd === ckInd){
-              if(find(nk, state.stacks[nkInd]) + 1 === find(ck, state.stacks[nkInd])){
+              if(find(nk, state.stacks[nkInd]) > find(ck, state.stacks[nkInd])){
                 keys.push(nk);
               }
             }
@@ -292,7 +327,7 @@ module Interpreter {
     * Returns the position of an element in a list.
     * Returns -1 if the object does not exist in the list.
     */
-    function find(needle : string, hayStack : string []) : number {
+    export function find(needle : string, hayStack : string []) : number {
       for(var i = 0; i < hayStack.length; i++){
         if(hayStack[i] === needle){
           return i;
@@ -305,7 +340,7 @@ module Interpreter {
     * Returns the position of a object in a stack given the world state.
     * Returns -1 if the object does not exist in the stack.
     */
-    function findStackIndex(needle : string, state: WorldState) : number {
+    export function findStackIndex(needle : string, state: WorldState) : number {
       for(var i = 0; i < state.stacks.length; i++){
         for(var s of state.stacks[i]){
           if(s === needle){
