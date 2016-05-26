@@ -94,7 +94,10 @@ module Interpreter {
     if(validTuples.length === 0) {
       throw "No interpretations found";
     }
-    return validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
+
+    var formula : DNFFormula = validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
+    //(console.log(formula);
+    return formula;
   }
 
 
@@ -250,7 +253,7 @@ module Interpreter {
     * @param state The current state of the world.
     * @returns A list of keys fullfilling the constraint
     */
-    function checkBinaryConstraint(curr : string [], next : string [], constraint: string, state : WorldState): string []{
+    export function checkBinaryConstraint(curr : string [], next : string [], constraint: string, state : WorldState): string []{
       //leftof rightof inside ontop under beside above
       //for every key in next, check relation with every key in curr
       var keys : string [] = [];

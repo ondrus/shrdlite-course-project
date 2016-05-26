@@ -45,32 +45,59 @@ module Planner {
         }
     }
 
-    function chooseCheapestLiteral(state : WorldState, formula : Interpreter.DNFFormula) : Interpreter.Literal{
-      if(formula.length > 1){
-        var literal = formula[0][0];
+    function goalReached(state : WorldState, interpretation : Interpreter.DNFFormula) : boolean{
+      for(var i = 1; i < interpretation.length; i++){
+        for(var j = 1; j < interpretation[i].length; j++){
+          var literal = interpretation[i][j];
+          var relation  = literal.relation;
+
+          if(relation === "holding" && state.holding === literal.args[0]){
+            return true;
+          }
+          var fKey = [literal.args[0]];
+          var sKey = [literal.args[1]];
+
+          //if this goal interpretation is reached, checkBinaryConstraint
+          //will return a nonempty list
+          var isGoal = Interpreter.checkBinaryConstraint(fKey, sKey, relation, state);
+          if(isGoal.length === 1){
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function chooseCheapestLiteral(state : WorldState, interpretation : Interpreter.DNFFormula) : Interpreter.Literal{
+      if(interpretation.length > 1){
+        var literal = interpretation[0][0];
         var oldHeuristic : number;
         if(literal.relation === "take"){
           oldHeuristic = unaryHeuristic(state, literal.args[0]);
-          for(var i = 1; i < formula.length; i++){
-            var tmp = unaryHeuristic(state, formula[i][0].args[0]);
-            if(tmp < oldHeuristic){
-              oldHeuristic = tmp;
-              literal = formula[i][0];
+          for(var i = 1; i < interpretation.length; i++){
+            for(var j = 1; j < interpretation[i].length; j++){
+              var tmp = unaryHeuristic(state, interpretation[i][j].args[0]);
+              if(tmp < oldHeuristic){
+                oldHeuristic = tmp;
+                literal = interpretation[i][j];
+              }
             }
           }
         }else{
           oldHeuristic = binaryHeuristic(state, literal.args[0], literal.args[1]);
-          for(var i = 1; i < formula.length; i++){
-            var tmp = binaryHeuristic(state, formula[i][0].args[0], formula[i][0].args[1]);
-            if(tmp < oldHeuristic){
-              oldHeuristic = tmp;
-              literal = formula[i][0];
+          for(var i = 1; i < interpretation.length; i++){
+            for(var j = 1; j < interpretation[i].length; j++){
+              var tmp = binaryHeuristic(state, interpretation[i][j].args[0], interpretation[i][j].args[1]);
+              if(tmp < oldHeuristic){
+                oldHeuristic = tmp;
+                literal = interpretation[i][j];
+              }
             }
           }
         }
       }
 
-      return formula[0][0];
+      return interpretation[0][0];
     }
 
     function unaryHeuristic(state : WorldState, startKey : string) : number{
