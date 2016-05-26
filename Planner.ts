@@ -2,6 +2,16 @@
 ///<reference path="Interpreter.ts"/>
 ///<reference path="Graph.ts"/>
 
+class WorldWrapperNode {
+    state : WorldState;
+    action : string;
+
+    constructor(state: WorldState, action: string) {
+        this.state = state;
+        this.action = action;
+    }
+}
+
 /** 
 * Planner module
 *
@@ -13,35 +23,31 @@
 * The planner should use your A* search implementation to find a plan.
 */
 
-class WorldGraph implements Graph<WorldState> {
+class WorldGraph implements Graph<WorldWrapperNode> {
 
-    private start : WorldState;
-    constructor(state : WorldState) {
-        this.start = state;
-    }
-
-    outgoingEdges(node : WorldState): Edge<WorldState>[]  {
+    outgoingEdges(node : WorldWrapperNode): Edge<WorldWrapperNode>[]  {
         var edges = [];
-        if(node.holding === null) {
-            if(node.stacks[node.arm]){
+        var state = node.state;
+        if(state.holding === null) {
+            if(state.stacks[state.arm]){
                 edges.push(this.createPickUpActionEdge(node))
             }
         } else {
             edges.push(this.createDropActionEdge(node))
         }
 
-        if(node.arm > 0) {
+        if(state.arm > 0) {
             edges.push(this.createLeftMoveActionEdge(node))
         }
 
-        if (node.arm < node.stacks.length - 1) {
+        if (state.arm < state.stacks.length - 1) {
             edges.push(this.createRightMoveActionEdge(node))
         }
 
         return edges;
     }
 
-    compareNodes(s1 : WorldState, s2 : WorldState) : number {
+    compareNodes(s1 : WorldWrapperNode, s2 : WorldWrapperNode) : number {
         if (JSON.stringify(s1) === JSON.stringify(s2)) {
             return 0;
         } else {
@@ -49,43 +55,45 @@ class WorldGraph implements Graph<WorldState> {
         }
     }
 
-    private createPickUpActionEdge(node : WorldState) {
+    private createPickUpActionEdge(node : WorldWrapperNode) {
         var e = new Edge();
         e.cost = 1;
         e.from = node;
-        var toNode = copyWorld(node);
-        toNode.holding = toNode.stacks[toNode.arm].pop();
-        e.to = toNode;
+        var nextState = copyWorld(node.state);
+        nextState.holding = nextState.stacks[nextState.arm].pop();
+        e.to = new WorldWrapperNode(nextState, "p");
+
         return e;
     }
 
-    private createDropActionEdge(node : WorldState) {
+    private createDropActionEdge(node : WorldWrapperNode) {
         var e = new Edge();
         e.cost = 1;
         e.from = node;
-        var toNode = copyWorld(node);
-        toNode.stacks[toNode.arm].push(toNode.holding);
-        toNode.holding = null;
+        var nextState = copyWorld(node.state);
+        nextState.stacks[nextState.arm].push(nextState.holding);
+        nextState.holding = null;
+        e.to = new WorldWrapperNode(nextState, "d");
         return e;
     }
 
-    private createLeftMoveActionEdge(node : WorldState) {
+    private createLeftMoveActionEdge(node : WorldWrapperNode) {
         var e = new Edge();
         e.cost = 1;
         e.from = node;
-        var toNode = copyWorld(node);
-        toNode.arm--;
-        e.to = toNode;
+        var nextState = copyWorld(node.state);
+        nextState.arm--;
+        e.to = new WorldWrapperNode(nextState, "l");
         return e;
     }
 
-    private createRightMoveActionEdge(node : WorldState) {
+    private createRightMoveActionEdge(node : WorldWrapperNode) {
         var e = new Edge();
         e.cost = 1;
         e.from = node;
-        var toNode = copyWorld(node);
-        toNode.arm++;
-        e.to = toNode;
+        var nextState = copyWorld(node.state);
+        nextState.arm++;
+        e.to = new WorldWrapperNode(nextState, "r");
         return e;
     }
 
@@ -161,49 +169,16 @@ module Planner {
      * be added using the `push` method.
      */
     function planInterpretation(interpretation : Interpreter.DNFFormula, state : WorldState) : string[] {
-        // This function returns a dummy plan involving a random stack
-        do {
-            var pickstack = Math.floor(Math.random() * state.stacks.length);
-        } while (state.stacks[pickstack].length == 0);
-        var plan : string[] = [];
+        var start = new WorldWrapperNode(state, null);
+        var graph = new WorldGraph();
+        
+        var goalFunction = (wwn) => true;
+        var heuristicFunction = (wwn) => 1337;
+        var result = aStarSearch<WorldWrapperNode>(graph, start, goalFunction, heuristicFunction, 10);
 
-        // First move the arm to the leftmost nonempty stack
-        if (pickstack < state.arm) {
-            plan.push("Moving left");
-            for (var i = state.arm; i > pickstack; i--) {
-                plan.push("l");
-            }
-        } else if (pickstack > state.arm) {
-            plan.push("Moving right");
-            for (var i = state.arm; i < pickstack; i++) {
-                plan.push("r");
-            }
-        }
+        var actions = result.path.map(wwn => wwn.action);
 
-        // Then pick up the object
-        var obj = state.stacks[pickstack][state.stacks[pickstack].length-1];
-        plan.push("Picking up the " + state.objects[obj].form,
-                  "p");
-
-        if (pickstack < state.stacks.length-1) {
-            // Then move to the rightmost stack
-            plan.push("Moving as far right as possible");
-            for (var i = pickstack; i < state.stacks.length-1; i++) {
-                plan.push("r");
-            }
-
-            // Then move back
-            plan.push("Moving back");
-            for (var i = state.stacks.length-1; i > pickstack; i--) {
-                plan.push("l");
-            }
-        }
-
-        // Finally put it down again
-        plan.push("Dropping the " + state.objects[obj].form,
-                  "d");
-
-        return plan;
+        return actions;
     }
 
 }
