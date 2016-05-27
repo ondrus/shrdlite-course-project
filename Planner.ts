@@ -26,14 +26,19 @@ class WorldWrapperNode {
 class WorldGraph implements Graph<WorldWrapperNode> {
 
     outgoingEdges(node : WorldWrapperNode): Edge<WorldWrapperNode>[]  {
-        var edges = [];
+        var edges : Edge<WorldWrapperNode>[];
+        edges = [];
         var state = node.state;
-        if(state.holding === null) {
-            if(state.stacks[state.arm]){
+        if(!state.holding) {
+            if(state.stacks[state.arm].length > 0){
                 edges.push(this.createPickUpActionEdge(node))
             }
         } else {
-            edges.push(this.createDropActionEdge(node))
+            if(state.stacks[state.arm].length > 0){
+
+            } else {
+                edges.push(this.createDropActionEdge(node))
+            }
         }
 
         if(state.arm > 0) {
@@ -43,7 +48,8 @@ class WorldGraph implements Graph<WorldWrapperNode> {
         if (state.arm < state.stacks.length - 1) {
             edges.push(this.createRightMoveActionEdge(node))
         }
-
+        //console.log("Outgoing edges", JSON.stringify(edges));
+        //console.log("NbrOfEdges", edges.length);
         return edges;
     }
 
@@ -55,8 +61,8 @@ class WorldGraph implements Graph<WorldWrapperNode> {
         }
     }
 
-    private createPickUpActionEdge(node : WorldWrapperNode) {
-        var e = new Edge();
+    private createPickUpActionEdge(node : WorldWrapperNode) : Edge<WorldWrapperNode> {
+        var e = new Edge<WorldWrapperNode>();
         e.cost = 1;
         e.from = node;
         var nextState = copyWorld(node.state);
@@ -66,19 +72,20 @@ class WorldGraph implements Graph<WorldWrapperNode> {
         return e;
     }
 
-    private createDropActionEdge(node : WorldWrapperNode) {
-        var e = new Edge();
+    private createDropActionEdge(node : WorldWrapperNode) : Edge<WorldWrapperNode> {
+        var e = new Edge<WorldWrapperNode>();
         e.cost = 1;
         e.from = node;
         var nextState = copyWorld(node.state);
+        //console.log("About to push:", nextState.holding);
         nextState.stacks[nextState.arm].push(nextState.holding);
         nextState.holding = null;
         e.to = new WorldWrapperNode(nextState, "d");
         return e;
     }
 
-    private createLeftMoveActionEdge(node : WorldWrapperNode) {
-        var e = new Edge();
+    private createLeftMoveActionEdge(node : WorldWrapperNode) : Edge<WorldWrapperNode> {
+        var e = new Edge<WorldWrapperNode>();
         e.cost = 1;
         e.from = node;
         var nextState = copyWorld(node.state);
@@ -87,8 +94,8 @@ class WorldGraph implements Graph<WorldWrapperNode> {
         return e;
     }
 
-    private createRightMoveActionEdge(node : WorldWrapperNode) {
-        var e = new Edge();
+    private createRightMoveActionEdge(node : WorldWrapperNode) : Edge<WorldWrapperNode> {
+        var e = new Edge<WorldWrapperNode>();
         e.cost = 1;
         e.from = node;
         var nextState = copyWorld(node.state);
@@ -103,6 +110,10 @@ class WorldGraph implements Graph<WorldWrapperNode> {
 
 function copyWorld(s : WorldState) : WorldState {
     return JSON.parse(JSON.stringify(s));
+}
+
+function obaysPhysicalLays(key1 : string, key2 : string, state : WorldState) : boolean {
+    return true;
 }
     
 module Planner {
@@ -140,33 +151,39 @@ module Planner {
     }
 
     function goalReached(state : WorldState, interpretation : Interpreter.DNFFormula) : boolean{
-      for(var i = 1; i < interpretation.length; i++){
-        for(var j = 1; j < interpretation[i].length; j++){
+       // console.log("foalREached");
+
+      for(var i = 0; i < interpretation.length; i++){
+        for(var j = 0; j < interpretation[i].length; j++){
           var literal = interpretation[i][j];
           var relation  = literal.relation;
-
+            //console.log(relation);
           if(relation === "holding" && state.holding === literal.args[0]){
             return true;
-          }
-          var fKey = [literal.args[0]];
-          var sKey = [literal.args[1]];
+          } else {
+              var fKey = [literal.args[0]];
+              var sKey = [literal.args[1]];
 
-          //if this goal interpretation is reached, checkBinaryConstraint
-          //will return a nonempty list
-          var isGoal = Interpreter.checkBinaryConstraint(fKey, sKey, relation, state);
-          if(isGoal.length === 1){
-            return true;
+              //if this goal interpretation is reached, checkBinaryConstraint
+              //will return a nonempty list
+              var isGoal = Interpreter.checkBinaryConstraint(sKey, fKey, relation, state);
+            //  console.log("isGoal", isGoal, fKey, sKey, relation, JSON.stringify(state, null, 2));
+              if(isGoal.length === 1){
+                  console.log("Winning");
+                  return true;
+              }
           }
         }
       }
       return false;
     }
 
-    function chooseCheapestLiteral(state : WorldState, interpretation : Interpreter.DNFFormula) : Interpreter.Literal{
-      if(interpretation.length > 1){
+    function chooseCheapestLiteral(state : WorldState, interpretation : Interpreter.DNFFormula) : number{
+        //console.log(interpretation);
         var literal = interpretation[0][0];
-        var oldHeuristic : number;
-        if(literal.relation === "take"){
+        var oldHeuristic : number = 0;
+
+        if(literal.relation === "holding"){
           oldHeuristic = unaryHeuristic(state, literal.args[0]);
           for(var i = 1; i < interpretation.length; i++){
             for(var j = 1; j < interpretation[i].length; j++){
@@ -178,6 +195,7 @@ module Planner {
             }
           }
         }else{
+            //  console.log(literal.args);
           oldHeuristic = binaryHeuristic(state, literal.args[0], literal.args[1]);
           for(var i = 1; i < interpretation.length; i++){
             for(var j = 1; j < interpretation[i].length; j++){
@@ -189,9 +207,8 @@ module Planner {
             }
           }
         }
-      }
 
-      return interpretation[0][0];
+      return oldHeuristic;
     }
 
     function unaryHeuristic(state : WorldState, startKey : string) : number{
@@ -207,11 +224,20 @@ module Planner {
 
     function binaryHeuristic(state : WorldState, startKey : string, goalKey : string) : number{
       var armIndex = state.arm;
-      var goalColumn = Interpreter.findStackIndex(goalKey, state);
-      var startColumn = Interpreter.findStackIndex(startKey, state);
 
+      var goalColumn = 0;
+        if(goalKey === "floor") {
+            goalColumn = 1;
+        } else {
+            goalColumn = Interpreter.findStackIndex(goalKey, state);
+        }
+        console.log(goalKey);
+      var startColumn = Interpreter.findStackIndex(startKey, state);
+        console.log("goalColumn", goalColumn);
       var goalStack = state.stacks[goalColumn];
 
+        console.log("goalSTack", goalStack);
+        console.log("goalSTackLength", goalStack.length);
       var objectsAboveGoal = (goalStack.length - 1) - Interpreter.find(goalKey, goalStack);
 
       return Math.abs(startColumn - goalColumn) +
@@ -248,16 +274,26 @@ module Planner {
      * be added using the `push` method.
      */
     function planInterpretation(interpretation : Interpreter.DNFFormula, state : WorldState) : string[] {
+        console.log("\nPlanInterpretation");
         var start = new WorldWrapperNode(state, null);
         var graph = new WorldGraph();
         
-        var goalFunction = (wwn) => true;
-        var heuristicFunction = (wwn) => 1337;
-        var result = aStarSearch<WorldWrapperNode>(graph, start, goalFunction, heuristicFunction, 10);
+        var goalFunction = (wwn:WorldWrapperNode) => goalReached(wwn.state, interpretation);
+        var heuristicFunction = (wwn:WorldWrapperNode) => chooseCheapestLiteral(wwn.state, interpretation);
+        console.log("Doing aStarSearch");
+        try {
+            var result = aStarSearch<WorldWrapperNode>(graph, start, goalFunction, heuristicFunction, 120);
+            console.log("Search complete");
+            console.log(result, "\n");
+            var actions = result.path.map(wwn => wwn.action);
+            actions.shift();
+            console.log("Actions: ", actions);
+            return actions;
+        } catch (err) {
+            console.log("Error", err);
+            throw err;
+        }
 
-        var actions = result.path.map(wwn => wwn.action);
-
-        return actions;
     }
 
 }

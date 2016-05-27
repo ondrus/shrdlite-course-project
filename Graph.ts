@@ -68,14 +68,14 @@ function aStarSearch<Node> (
     var mHeuristicMap = new collections.Dictionary<Node,number>();
     var mHeuristics = memoizeHeuristics.bind(this, mHeuristicMap, heuristics);
 
-    var closedSet = new collections.Set<Node>();
+    var closedSet = new collections.Set<Node>(JSON.stringify);
     var nodeCompare = (n1:Node, n2:Node) => {
         return lookupWithDefaultInfinity(n2, fScore) - lookupWithDefaultInfinity(n1, fScore);
     };
     var openSetP = new collections.PriorityQueue(nodeCompare);
-    var gScore = new collections.Dictionary<Node, number>();
-    var cameFrom = new collections.Dictionary<Node,Node>();
-    var fScore = new collections.Dictionary<Node, number>();
+    var gScore = new collections.Dictionary<Node, number>(JSON.stringify);
+    var cameFrom = new collections.Dictionary<Node,Node>(JSON.stringify);
+    var fScore = new collections.Dictionary<Node, number>(JSON.stringify);
 
     openSetP.add(start);
     gScore.setValue(start, 0);
@@ -91,6 +91,7 @@ function aStarSearch<Node> (
 
         var current = openSetP.dequeue();
         if(goal(current)){
+            console.log("Returning from aStar");
             return {
                 path: reconstructPath(cameFrom, current),
                 cost: gScore.getValue(current),
@@ -101,22 +102,29 @@ function aStarSearch<Node> (
         closedSet.add(current);
 
         var outgoing = graph.outgoingEdges(current);
-
+        ////console.log("Outgoing", outgoing.length);
         for (var e of outgoing){
+            ////console.log("Open set", JSON.stringify(openSetP, null, 2));
             var neighbor = e.to;
+            ////console.log("neigbour", JSON.stringify(e.to, null, 2));
+            ////console.log("closedSet111", JSON.stringify(closedSet, null, 2));
             if(closedSet.contains(neighbor)){
+                //console.log("closedSet contains neighbor");
                 continue;
             }
 
             var tentativeScore = lookupWithDefaultInfinity(current, gScore) + e.cost;
-            if (!openSetP.contains(neighbor)){
+            if (!priorityQueueContainsElement<Node>(openSetP, neighbor)){
+                ////console.log("Did not contain adding neigbor");
                 updateScores(neighbor, tentativeScore);
                 openSetP.add(neighbor);
             } else if (tentativeScore >= lookupWithDefaultInfinity(neighbor, gScore)){
+                ////console.log("Did contain already");
+                //console.log(JSON.stringify(neighbor, null, 2));
                 continue;
             } else {
                 updateScores(neighbor, tentativeScore);
-
+                //console.log("Did cotnain already 2nd case");
                 // We haven't found any way to update a value in the PriorityQueue
                 // so when necessary we refresh the queue to make sure items are correctly ordered.
                 var newQueue = new PriorityQueue(nodeCompare);
@@ -126,6 +134,11 @@ function aStarSearch<Node> (
 
             cameFrom.setValue(neighbor, current);
         }
+        if(1==2){
+            throw "end";
+        }
+
+        //console.log("Size of closed and open", closedSet.size(), openSetP.size());
 
         var now = Date.now();
 
@@ -135,10 +148,22 @@ function aStarSearch<Node> (
         if(now - startTime > (timeout*1000)) {
             throw "Timeout reached";
         }
-
+        //console.log("openSet", openSetP);
     }
 
+    ////console.log("Closed set", JSON.stringify(closedSet, null, 2));
+
     throw "No path found";
+}
+
+function priorityQueueContainsElement<Node>(priorityQueue : collections.PriorityQueue<Node>, neighbour : Node){
+    var test = false;
+    priorityQueue.forEach(n => {
+        if(JSON.stringify(n) === JSON.stringify(neighbour)){
+            test = true;
+        }
+    });
+    return test;
 }
 
 function reconstructPath<Node>(
