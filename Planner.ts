@@ -15,18 +15,18 @@ module Planner {
      * @param currentState The current state of the world.
      * @returns Augments Interpreter.InterpretationResult with a plan represented by a list of strings.
      */
-    export function plan(interpretations : Interpreter.InterpretationResult[], currentState : WorldState) : PlannerResult[] {
-        var errors : Error[] = [];
-        var plans : PlannerResult[] = [];
+    export function plan(interpretations:Interpreter.InterpretationResult[], currentState:WorldState):PlannerResult[] {
+        var errors:Error[] = [];
+        var plans:PlannerResult[] = [];
         interpretations.forEach((interpretation) => {
             try {
-                var result : PlannerResult = <PlannerResult>interpretation;
+                var result:PlannerResult = <PlannerResult>interpretation;
                 result.plan = planInterpretation(result.interpretation, currentState);
                 if (result.plan.length == 0) {
                     result.plan.push("That is already true!");
                 }
                 plans.push(result);
-            } catch(err) {
+            } catch (err) {
                 errors.push(err);
             }
         });
@@ -38,53 +38,53 @@ module Planner {
         }
     }
 
-    function goalReached(state : WorldState, interpretation : Interpreter.DNFFormula) : boolean{
-      for(var i = 0; i < interpretation.length; i++){
-        for(var j = 0; j < interpretation[i].length; j++){
-          var literal = interpretation[i][j];
-          var relation  = literal.relation;
+    function goalReached(state:WorldState, interpretation:Interpreter.DNFFormula):boolean {
+        for (var i = 0; i < interpretation.length; i++) {
+            for (var j = 0; j < interpretation[i].length; j++) {
+                var literal = interpretation[i][j];
+                var relation = literal.relation;
 
-          if(relation === "holding" && state.holding === literal.args[0]){
-            return true;
-          } else {
-              var fKey = [literal.args[0]];
-              var sKey = [literal.args[1]];
+                if (relation === "holding" && state.holding === literal.args[0]) {
+                    return true;
+                } else {
+                    var fKey = [literal.args[0]];
+                    var sKey = [literal.args[1]];
 
-              //if this goal interpretation is reached, checkBinaryConstraint
-              //will return a nonempty list
-              var isGoal = Interpreter.checkBinaryConstraint(sKey, fKey, relation, state);
-              if(isGoal.length === 1){
-                  return true;
-              }
-          }
+                    //if this goal interpretation is reached, checkBinaryConstraint
+                    //will return a nonempty list
+                    var isGoal = Interpreter.checkBinaryConstraint(sKey, fKey, relation, state);
+                    if (isGoal.length === 1) {
+                        return true;
+                    }
+                }
+            }
         }
-      }
-      return false;
+        return false;
     }
 
-    function chooseCheapestLiteral(state : WorldState, interpretation : Interpreter.DNFFormula) : number{
+    function chooseCheapestLiteral(state:WorldState, interpretation:Interpreter.DNFFormula):number {
         var literal = interpretation[0][0];
-        var oldHeuristic : number;
-        var heuristicFunc : (s : WorldState, l : Literal) => number;
-        
-        if(literal.relation === "holding") {
+        var oldHeuristic:number;
+        var heuristicFunc:(s:WorldState, l:Literal) => number;
+
+        if (literal.relation === "holding") {
             heuristicFunc = unaryHeuristic;
         } else {
             heuristicFunc = binaryHeuristic;
         }
 
         oldHeuristic = heuristicFunc(state, literal);
-        for(var i = 0; i < interpretation.length; i++){
-          for(var j = 0; j < interpretation[i].length; j++){
-            var tmp = heuristicFunc(state, interpretation[i][j]);
-              if(tmp < oldHeuristic){
-                oldHeuristic = tmp;
-                literal = interpretation[i][j];
-              }
+        for (var i = 0; i < interpretation.length; i++) {
+            for (var j = 0; j < interpretation[i].length; j++) {
+                var tmp = heuristicFunc(state, interpretation[i][j]);
+                if (tmp < oldHeuristic) {
+                    oldHeuristic = tmp;
+                    literal = interpretation[i][j];
+                }
             }
-          }
+        }
 
-      return oldHeuristic;
+        return oldHeuristic;
     }
 
     function distanceToKey(key:string, state:WorldState) {
@@ -94,19 +94,19 @@ module Planner {
         return Math.abs(armIndex - stackIndex) + objectsAboveStart;
     }
 
-    function unaryHeuristic(state : WorldState, literal : Literal) : number{
-      var key = literal.args[0];
-      if(state.holding === key) {
-          return 0;
-      }
+    function unaryHeuristic(state:WorldState, literal:Literal):number {
+        var key = literal.args[0];
+        if (state.holding === key) {
+            return 0;
+        }
         return distanceToKey(key, state);
     }
 
-    function binaryHeuristic(state : WorldState, literal : Literal) : number{
-      var startKey = literal.args[0];
-      var goalKey = literal.args[1];
-      var distanceToGoal : number = 0;
-      var distanceToStart : number = 0;
+    function binaryHeuristic(state:WorldState, literal:Literal):number {
+        var startKey = literal.args[0];
+        var goalKey = literal.args[1];
+        var distanceToGoal:number = 0;
+        var distanceToStart:number = 0;
 
         if (goalKey === "floor") {
             distanceToGoal = findClosestFloor(state);
@@ -122,7 +122,7 @@ module Planner {
             distanceToStart = distanceToKey(startKey, state);
         }
 
-        if(literal.relation === "ontop" || literal.relation === "inside" || literal.relation === "below") {
+        if (literal.relation === "ontop" || literal.relation === "inside" || literal.relation === "below") {
             return distanceToStart + distanceToGoal;
         } else {
             //TODO other relations
@@ -130,16 +130,16 @@ module Planner {
         }
     }
 
-    function objectsAboveKey(key : string, stack : string[]) : number {
+    function objectsAboveKey(key:string, stack:string[]):number {
         return (stack.length - 1) - Interpreter.find(key, stack);
     }
 
-    function findClosestFloor(state : WorldState) : number {
+    function findClosestFloor(state:WorldState):number {
         var closestFloor = Infinity;
         var armIndex = state.arm;
-        for(var i = 0; i < state.stacks.length; i++) {
-            var curr : number = state.stacks[i].length + Math.abs(i - armIndex);
-            if(curr < closestFloor) {
+        for (var i = 0; i < state.stacks.length; i++) {
+            var curr:number = state.stacks[i].length + Math.abs(i - armIndex);
+            if (curr < closestFloor) {
                 closestFloor = curr;
             }
         }
@@ -147,10 +147,10 @@ module Planner {
     }
 
     export interface PlannerResult extends Interpreter.InterpretationResult {
-        plan : string[];
+        plan:string[];
     }
 
-    export function stringify(result : PlannerResult) : string {
+    export function stringify(result:PlannerResult):string {
         return result.plan.join(", ");
     }
 
@@ -175,16 +175,16 @@ module Planner {
      * "d". The code shows how to build a plan. Each step of the plan can
      * be added using the `push` method.
      */
-    function planInterpretation(interpretation : Interpreter.DNFFormula, state : WorldState) : string[] {
+    function planInterpretation(interpretation:Interpreter.DNFFormula, state:WorldState):string[] {
         var start = new WorldWrapperNode(state, null);
         var graph = new WorldGraph();
         var goalFunction = (wwn:WorldWrapperNode) => goalReached(wwn.state, interpretation);
-        var heuristicFunction = (wwn:WorldWrapperNode) =>  chooseCheapestLiteral(wwn.state, interpretation);
+        var heuristicFunction = (wwn:WorldWrapperNode) => chooseCheapestLiteral(wwn.state, interpretation);
         var before = Date.now();
         var result = aStarSearch<WorldWrapperNode>(graph, start, goalFunction, heuristicFunction, 120);
         var after = Date.now();
 
-        console.log("Ran in", after-before);
+        console.log("Ran in", after - before);
 
         var actions = result.path.map(wwn => wwn.action);
         actions.shift();
