@@ -47,8 +47,26 @@ class WorldGraph implements Graph<WorldWrapperNode> {
         return edges;
     }
 
-    compareNodes(s1:WorldWrapperNode, s2:WorldWrapperNode):number {
-        if (JSON.stringify(s1.state) === JSON.stringify(s2.state)) {
+    compareNodes(ws1:WorldWrapperNode, ws2:WorldWrapperNode):number {
+        var s1 = ws1.state;
+        var s2 = ws2.state;
+        if (s1.arm === s2.arm && s1.holding === s2.holding) {
+            for(var i = 0; i < s1.stacks.length; i++) {
+                if(s1.stacks[i].length !== s2.stacks[i].length) {
+                    return 1;
+                }
+            }
+
+            for(var i = 0; i < s1.stacks.length; i++) {
+                if(s1.stacks[i].length !== s2.stacks[i].length){
+                    return 1;
+                }
+                for(var j = 0; j < s1.stacks[i].length; j++){
+                    if(s1.stacks[i][j] !== s2.stacks[i][j]){
+                        return 1;
+                    }
+                }
+            }
             return 0;
         } else {
             return 1;

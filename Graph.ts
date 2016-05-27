@@ -169,13 +169,20 @@ function aStarSearch<Node> (
 }
 
 function priorityQueueContainsElement<Node>(priorityQueue : collections.PriorityQueue<Node>, neighbour : Node, g : Graph<Node>){
-    var test = false;
-    priorityQueue.forEach(n => {
-        if(g.compareNodes(n, neighbour) === 0){
-            test = true;
+    try {
+        priorityQueue.forEach(n => {
+            if(g.compareNodes(n, neighbour) === 0){
+                throw "value found";
+            }
+        });
+    } catch (error) {
+        if(error === "value found"){
+            return true;
+        } else {
+            throw error;
         }
-    });
-    return test;
+    }
+    return false;
 }
 
 function closedSetContainsElement<Node>(s : Node[], needle : Node, g : Graph<Node>) {
