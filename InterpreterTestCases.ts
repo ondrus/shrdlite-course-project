@@ -60,7 +60,6 @@ var allTestCases : TestCase[] = [
      utterance: "put a ball in a box on the floor",
      interpretations: [["inside(e,k)", "inside(f,k)"], ["ontop(f,floor)"]]
     },
-
     {world: "small",
      utterance: "put a white ball in a box on the floor",
      interpretations: [["inside(e,k)"]]

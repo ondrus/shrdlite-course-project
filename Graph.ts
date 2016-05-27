@@ -1,5 +1,6 @@
 ///<reference path="lib/collections.ts"/>
 ///<reference path="lib/node.d.ts"/>
+///<reference path="WorldGraph.ts"/>
 
 /** Graph module
 *
@@ -36,21 +37,46 @@ class SearchResult<Node> {
     iterations: number;
 }
 
+
+function prettyPrintOpenSet<Node>(pq : collections.PriorityQueue<Node>) {
+    console.log("OpenSet", pq.size());
+    pq.forEach(n => {
+        var state = n["state"];
+        console.log("------");
+        console.log(JSON.stringify(state.stacks), n["action"], JSON.stringify(state.arm, null, 2), JSON.stringify(state.holding, null, 2));
+    });
+    console.log("------")
+}
+
+function prettyPrintClosedSet<Node>(s : Node[]){
+    console.log("ClosedSet", s.length);
+    s.forEach(n => {
+        var state = n["state"];
+        console.log(JSON.stringify(state.stacks), n["action"], JSON.stringify(state.arm, null, 2), JSON.stringify(state.holding, null, 2));
+    })
+}
+
+function prettyPrintScore<Node>(table : collections.Dictionary<Node, number>) {
+    table.keys().forEach(k => {
+        console.log(k, table.getValue(k));
+    })
+}
+
 /**
-* A\* search implementation, parameterised by a `Node` type. The code
-* here is just a template; you should rewrite this function
-* entirely. In this template, the code produces a dummy search result
-* which just picks the first possible neighbour.
-*
-* Note that you should not change the API (type) of this function,
-* only its body.
-* @param graph The graph on which to perform A\* search.
-* @param start The initial node.
-* @param goal A function that returns true when given a goal node. Used to determine if the algorithm has reached the goal.
-* @param heuristics The heuristic function. Used to estimate the cost of reaching the goal from a given Node.
-* @param timeout Maximum time (in seconds) to spend performing A\* search.
-* @returns A search result, which contains the path from `start` to a node satisfying `goal` and the cost of this path.
-*/
+ * A\* search implementation, parameterised by a `Node` type. The code
+ * here is just a template; you should rewrite this function
+ * entirely. In this template, the code produces a dummy search result
+ * which just picks the first possible neighbour.
+ *
+ * Note that you should not change the API (type) of this function,
+ * only its body.
+ * @param graph The graph on which to perform A\* search.
+ * @param start The initial node.
+ * @param goal A function that returns true when given a goal node. Used to determine if the algorithm has reached the goal.
+ * @param heuristics The heuristic function. Used to estimate the cost of reaching the goal from a given Node.
+ * @param timeout Maximum time (in seconds) to spend performing A\* search.
+ * @returns A search result, which contains the path from `start` to a node satisfying `goal` and the cost of this path.
+ */
 
 function aStarSearch<Node> (
     graph : Graph<Node>,
@@ -68,14 +94,14 @@ function aStarSearch<Node> (
     var mHeuristicMap = new collections.Dictionary<Node,number>();
     var mHeuristics = memoizeHeuristics.bind(this, mHeuristicMap, heuristics);
 
-    var closedSet = new collections.Set<Node>(JSON.stringify);
+    var closedSet : Node[] = [];
     var nodeCompare = (n1:Node, n2:Node) => {
         return lookupWithDefaultInfinity(n2, fScore) - lookupWithDefaultInfinity(n1, fScore);
     };
     var openSetP = new collections.PriorityQueue(nodeCompare);
-    var gScore = new collections.Dictionary<Node, number>(JSON.stringify);
+    var gScore = new collections.Dictionary<Node, number>();
     var cameFrom = new collections.Dictionary<Node,Node>(JSON.stringify);
-    var fScore = new collections.Dictionary<Node, number>(JSON.stringify);
+    var fScore = new collections.Dictionary<Node, number>();
 
     openSetP.add(start);
     gScore.setValue(start, 0);
@@ -87,8 +113,8 @@ function aStarSearch<Node> (
     }
 
     while (!openSetP.isEmpty()){
-        count++;
 
+        count++;
         var current = openSetP.dequeue();
         if(goal(current)){
             console.log("Returning from aStar");
@@ -99,32 +125,23 @@ function aStarSearch<Node> (
             };
         }
 
-        closedSet.add(current);
+        closedSet.push(current);
 
         var outgoing = graph.outgoingEdges(current);
-        ////console.log("Outgoing", outgoing.length);
         for (var e of outgoing){
-            ////console.log("Open set", JSON.stringify(openSetP, null, 2));
             var neighbor = e.to;
-            ////console.log("neigbour", JSON.stringify(e.to, null, 2));
-            ////console.log("closedSet111", JSON.stringify(closedSet, null, 2));
-            if(closedSet.contains(neighbor)){
-                //console.log("closedSet contains neighbor");
+            if(closedSetContainsElement(closedSet, neighbor, graph)){
                 continue;
             }
 
             var tentativeScore = lookupWithDefaultInfinity(current, gScore) + e.cost;
-            if (!priorityQueueContainsElement<Node>(openSetP, neighbor)){
-                ////console.log("Did not contain adding neigbor");
+            if (!priorityQueueContainsElement<Node>(openSetP, neighbor, graph)){
                 updateScores(neighbor, tentativeScore);
                 openSetP.add(neighbor);
             } else if (tentativeScore >= lookupWithDefaultInfinity(neighbor, gScore)){
-                ////console.log("Did contain already");
-                //console.log(JSON.stringify(neighbor, null, 2));
                 continue;
             } else {
                 updateScores(neighbor, tentativeScore);
-                //console.log("Did cotnain already 2nd case");
                 // We haven't found any way to update a value in the PriorityQueue
                 // so when necessary we refresh the queue to make sure items are correctly ordered.
                 var newQueue = new PriorityQueue(nodeCompare);
@@ -138,7 +155,6 @@ function aStarSearch<Node> (
             throw "end";
         }
 
-        //console.log("Size of closed and open", closedSet.size(), openSetP.size());
 
         var now = Date.now();
 
@@ -148,22 +164,27 @@ function aStarSearch<Node> (
         if(now - startTime > (timeout*1000)) {
             throw "Timeout reached";
         }
-        //console.log("openSet", openSetP);
     }
-
-    ////console.log("Closed set", JSON.stringify(closedSet, null, 2));
-
     throw "No path found";
 }
 
-function priorityQueueContainsElement<Node>(priorityQueue : collections.PriorityQueue<Node>, neighbour : Node){
+function priorityQueueContainsElement<Node>(priorityQueue : collections.PriorityQueue<Node>, neighbour : Node, g : Graph<Node>){
     var test = false;
     priorityQueue.forEach(n => {
-        if(JSON.stringify(n) === JSON.stringify(neighbour)){
+        if(g.compareNodes(n, neighbour) === 0){
             test = true;
         }
     });
     return test;
+}
+
+function closedSetContainsElement<Node>(s : Node[], needle : Node, g : Graph<Node>) {
+    for (var n of s) {
+        if (g.compareNodes(n, needle) === 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function reconstructPath<Node>(

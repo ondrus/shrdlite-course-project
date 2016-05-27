@@ -104,6 +104,23 @@ ExampleWorlds["small"] = {
 };
 
 
+ExampleWorlds["tiny"] = {
+    "stacks": [["plank","brick"],[],[], [], []],
+    "holding": null,
+    "arm": 0,
+    "objects": {
+        "a": { "form":"table",   "size":"small",  "color":"white" },
+        "plank": { "form":"plank",   "size":"large",  "color":"white" },
+        "c": { "form":"table",   "size":"large",  "color":"red"   },
+        "brick": { "form":"brick",   "size":"small",  "color":"red"   },
+    },
+    "examples": [
+        "take the brick",
+        "put the brick on the plank"
+    ]
+};
+
+
 ExampleWorlds["impossible"] = { 
     "stacks": [["lbrick1","lball1","sbrick1"], [],
                ["lpyr1","lbox1","lplank2","sball2"], [],

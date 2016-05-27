@@ -91,13 +91,13 @@ module Interpreter {
     var keys = resolveEntityKeys(cmd.entity, state);
     var keysLocation = resolveEntityKeys(cmd.location.entity, state);
     var validTuples = filterValidPairs(keys, keysLocation, cmd.location.relation, state);
+
     if(validTuples.length === 0) {
       throw "No interpretations found";
     }
 
-    var formula : DNFFormula = validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
-    //(console.log(formula);
-    return formula;
+    return validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
+
   }
 
 
@@ -117,7 +117,6 @@ module Interpreter {
       throw "Invalid command";
     }
   }
-
 
     /** Resolves all the relevant keys for this entety.
      * @param entity The entity to resolve keys from.
@@ -162,32 +161,34 @@ module Interpreter {
             continue;
           }
           switch(relation) {
-            case "inside":
-            if(state.objects[sk].form === "box" && state.objects[fk].form !==
-              "floor" && boxCanHoldObject(sk, fk, state)){
-              pairs.push([fk, sk]);
-            }
-            break;
             case "ontop":
-            /*if(canPlaceOnTop(fk, sk, state)){
-              pairs.push([fk, sk]);
-            }*/
-            if(sk === "floor" || (state.objects[fk].form !== "ball" && canPlaceOnTop(fk, sk, state))){
-              pairs.push([fk, sk]);
-            }
-            break;
+            case "inside":
+              if(canPlaceOnTopOrInside(fk, sk, state)){
+                pairs.push([fk, sk]);
+              }
+              break;
             case "beside":
             case "leftof":
             case "rightof":
             case "above":
-            if(state.objects[fk].form !== "floor" && state.objects[sk].form !== "floor") {
-              pairs.push([fk, sk]);
-            }
-            break;
+              if(state.objects[fk].form !== "floor" && state.objects[sk].form !== "floor") {
+                pairs.push([fk, sk]);
+              }
+              break;
           }
         }
       }
       return pairs;
+    }
+
+    export function canPlaceOnTopOrInside(key1 : string, key2 : string, state : WorldState) {
+        if(key2 === "floor" || (state.objects[key1].form !== "ball" && canPlaceOnTop(key1, key2, state))) {
+          return true;
+        } else if(state.objects[key2].form === "box" && state.objects[key1].form !== "floor" && boxCanHoldObject(key2, key1, state)){
+          return true;
+        } else {
+          return false;
+        }
     }
 
     /** Checks if a box can hold an object.
@@ -267,67 +268,112 @@ module Interpreter {
           }
           var nkInd = findStackIndex(nk, state);
           var ckInd = findStackIndex(ck, state);
+
           switch (constraint){
             case "rightof" :
-            if(nkInd > ckInd){
-              keys.push(nk);
-            }
-            break;
+              if(rightOf(nk, nkInd, ck, ckInd)){
+                keys.push(nk);
+              }
+              break;
             case "leftof" :
-            if(nkInd < ckInd){
-              keys.push(nk);
-            }
-            break;
+              if(leftOf(nk, nkInd, ck,ckInd)){
+                keys.push(nk);
+              }
+              break;
             case "inside" :
-            if(nkInd > -1 && ckInd > -1 &&  nkInd === ckInd){
-              if(find(nk, state.stacks[nkInd]) - 1 === find(ck, state.stacks[nkInd]) && state.objects[ck].form === "box"){
-                keys.push(nk);
-              }
-            }
-            break;
-            case "ontop" :
-            if(ck === "floor") {
-              if(find(nk, state.stacks[nkInd]) === 0){
-                keys.push(nk);
+                if(inside(nk, nkInd, ck, ckInd, state)){
+                  keys.push(nk);
+                }
                 break;
-              }
-            }
-            if(nkInd > -1 && ckInd > -1 &&  nkInd === ckInd){
-              if(find(nk, state.stacks[nkInd]) - 1 === find(ck, state.stacks[nkInd])){
-                keys.push(nk);
-              }
-            }
-            break;
+            case "ontop" :
+                if(ontop(nk, nkInd, ck, ckInd, state)){
+                  keys.push(nk);
+                }
+                break;
             case "under" :
-            if(nkInd === ckInd){
-              if(find(nk, state.stacks[nkInd]) > find(ck, state.stacks[nkInd])){
-                keys.push(nk);
-              }
-            }
-            break;
+                if(under(nk, nkInd, ck, ckInd, state)){
+                  keys.push(nk);
+                }
+                break;
             case "beside" :
-            if(nkInd === (ckInd - 1) || nkInd === (ckInd +1)){
-              keys.push(nk);
-            }
-            break;
+                if(beside(nk, nkInd, ck, ckInd, state)){
+                  keys.push(nk);
+                }
+                break;
             case "above" :
-            if(nkInd === ckInd){
-              if(find(nk, state.stacks[nkInd]) > find(ck, state.stacks[nkInd])){
-                keys.push(nk);
-              }
-            }
-            break;
+                if(above(nk, nkInd, ck, ckInd, state)){
+                  keys.push(nk);
+                }
+                break;
           }
         }
       }
       return keys;
     }
 
+    function rightOf(key1 : string, key1Ind : number, key2 : string, key2Ind : number) {
+      return (key1Ind > key2Ind);
+    }
+
+  function leftOf(key1 : string, key1Ind : number, key2 : string, key2Ind : number) {
+    return (key1Ind < key2Ind);
+  }
+
+  function inside(key1 : string, key1Ind : number, key2 : string, key2Ind : number, state : WorldState) {
+    if(key1Ind > -1 && key2Ind > -1 &&  key1Ind === key2Ind){
+      if(find(key1, state.stacks[key1Ind]) - 1 === find(key2, state.stacks[key1Ind]) && state.objects[key2].form === "box"){
+        return true
+      }
+    }
+    return false;
+  }
+
+  function ontop(key1 : string, key1Ind : number, key2 : string, key2Ind : number, state : WorldState) {
+    if(key2 === "floor" && key1Ind > -1) {
+      if(find(key1, state.stacks[key1Ind]) === 0){
+        return true;
+      }
+    }
+
+    if(key1Ind > -1 && key2Ind > -1 &&  key1Ind === key2Ind){
+      if(find(key1, state.stacks[key1Ind]) - 1 === find(key2, state.stacks[key1Ind])){
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function under(key1 : string, key1Ind : number, key2 : string, key2Ind : number, state : WorldState) {
+    if(key1Ind === key2Ind){
+      if(find(key1, state.stacks[key1Ind]) > find(key2, state.stacks[key1Ind])){
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function beside(key1 : string, key1Ind : number, key2 : string, key2Ind : number, state : WorldState) {
+    return (key1Ind === (key2Ind - 1) || key1Ind === (key2Ind +1));
+  }
+
+  function above(key1 : string, key1Ind : number, key2 : string, key2Ind : number, state : WorldState){
+    if(key1Ind === key2Ind){
+      if(find(key1, state.stacks[key1Ind]) > find(key2, state.stacks[key1Ind])){
+        return true;
+      }
+    }
+    return false;
+  }
+
     /**
     * Returns the position of an element in a list.
     * Returns -1 if the object does not exist in the list.
     */
     export function find(needle : string, hayStack : string []) : number {
+      if(!hayStack){
+        return -1;
+      }
       for(var i = 0; i < hayStack.length; i++){
         if(hayStack[i] === needle){
           return i;
@@ -360,6 +406,9 @@ module Interpreter {
         for (var k of s) {
           keys.push(k);
         }
+      }
+      if(state.holding){
+        keys.push(state.holding);
       }
       return keys;
     }
