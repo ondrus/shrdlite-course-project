@@ -80,11 +80,26 @@ module Interpreter {
   function interpretTakeCase(cmd:Parser.Command, state:WorldState){
       var keys = resolveEntityKeys(cmd.entity, state);
       var valid = keys.filter(k => k !== "floor");
+
       if(valid.length === 0) {
         throw "No interpretations found";
       }
 
+      if(valid.length > 1) {
+        throw "Do you mean the " + valid.map(key => stringifyObject(key, state)).join(" or the ") + "?";
+      }
+
       return valid.map(validKey => [{polarity:true, relation:"holding", args: [validKey]}]);
+  }
+
+  function stringifyObject(key : string, state : WorldState) {
+    if(key === "floor"){
+      return key;
+    }
+
+    var o : Parser.Object = state.objects[key];
+
+    return [o.size, o.color, o.form].join(" ");
   }
 
   function interpretMoveCase(cmd:Parser.Command, state:WorldState) {
@@ -94,6 +109,10 @@ module Interpreter {
 
     if(validTuples.length === 0) {
       throw "No interpretations found";
+    }
+
+    if(validTuples.length > 1) {
+      throw "Do you mean the " + validTuples.map(tuple => stringifyObject(tuple[0], state) + " " + cmd.location.relation + " the " + stringifyObject(tuple[1], state)).join(" or the ") + "?";
     }
 
     return validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
@@ -110,7 +129,11 @@ module Interpreter {
   */
   function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
     if (cmd.command === "take") {
-      return interpretTakeCase(cmd, state);
+      var formula = interpretTakeCase(cmd, state);
+      if(formula.length > 1) {
+        throw "Do you mean " + JSON.stringify(formula[0]) + " or " + JSON.stringify(formula[1]);
+      }
+      return formula;
     } else if (cmd.command === "move") {
       return interpretMoveCase(cmd, state);
     } else {
@@ -167,10 +190,19 @@ module Interpreter {
                 pairs.push([fk, sk]);
               }
               break;
+            case "above":
+              if(state.objects[fk].form !== "floor" && state.objects[sk].form !== "floor" && state.objects[sk].form !== "ball") {
+                pairs.push([fk, sk]);
+              }
+              break;
+            case "under":
+              if(state.objects[fk].form !== "floor" && state.objects[sk].form !== "floor" && state.objects[fk].form !== "ball" && canPlaceOnTopOrInside(sk, fk, state)) {
+                pairs.push([fk, sk]);
+              }
+              break;
             case "beside":
             case "leftof":
             case "rightof":
-            case "above":
               if(state.objects[fk].form !== "floor" && state.objects[sk].form !== "floor") {
                 pairs.push([fk, sk]);
               }
@@ -276,7 +308,7 @@ module Interpreter {
               }
               break;
             case "leftof" :
-              if(leftOf(nk, nkInd, ck,ckInd)){
+              if(leftOf(nk, nkInd, ck, ckInd)){
                 keys.push(nk);
               }
               break;
@@ -312,11 +344,11 @@ module Interpreter {
     }
 
     function rightOf(key1 : string, key1Ind : number, key2 : string, key2Ind : number) {
-      return (key1Ind > key2Ind);
+      return (key1Ind > -1 && key2Ind > -1) && (key1Ind > key2Ind);
     }
 
   function leftOf(key1 : string, key1Ind : number, key2 : string, key2Ind : number) {
-    return (key1Ind < key2Ind);
+    return  (key1Ind > -1 && key2Ind > -1) && (key1Ind < key2Ind);
   }
 
   function inside(key1 : string, key1Ind : number, key2 : string, key2Ind : number, state : WorldState) {
@@ -345,8 +377,8 @@ module Interpreter {
   }
 
   function under(key1 : string, key1Ind : number, key2 : string, key2Ind : number, state : WorldState) {
-    if(key1Ind === key2Ind){
-      if(find(key1, state.stacks[key1Ind]) > find(key2, state.stacks[key1Ind])){
+    if((key1Ind > -1 && key2Ind > -1) && key1Ind === key2Ind){
+      if(find(key1, state.stacks[key1Ind]) < find(key2, state.stacks[key2Ind])){
         return true;
       }
     }
@@ -354,12 +386,12 @@ module Interpreter {
   }
 
   function beside(key1 : string, key1Ind : number, key2 : string, key2Ind : number, state : WorldState) {
-    return (key1Ind === (key2Ind - 1) || key1Ind === (key2Ind +1));
+    return (key1Ind > -1 && key2Ind > -1) && (key1Ind === (key2Ind - 1) || key1Ind === (key2Ind + 1));
   }
 
   function above(key1 : string, key1Ind : number, key2 : string, key2Ind : number, state : WorldState){
-    if(key1Ind === key2Ind){
-      if(find(key1, state.stacks[key1Ind]) > find(key2, state.stacks[key1Ind])){
+    if((key1Ind > -1 && key2Ind > -1) && key1Ind === key2Ind){
+      if(find(key1, state.stacks[key1Ind]) > find(key2, state.stacks[key2Ind])){
         return true;
       }
     }
