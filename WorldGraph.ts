@@ -1,4 +1,5 @@
 ///<reference path="Interpreter.ts"/>
+///<reference path="Graph.ts"/>
 
 class WorldWrapperNode {
     state:WorldState;
