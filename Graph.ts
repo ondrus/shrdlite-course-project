@@ -159,8 +159,6 @@ function aStarSearch<Node> (
         }
         
         var now = Date.now();
-        //if(1==1)
-        //    throw "end";
 
         // While this solution for timeout isn't optimal:
         // (if an iteration takes 5 minutes the timout will trigger too late if set to less then 5 minutes)
