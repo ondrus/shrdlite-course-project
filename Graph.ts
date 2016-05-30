@@ -37,6 +37,14 @@ class SearchResult<Node> {
     iterations: number;
 }
 
+class FScoreNodeWrapper<Node> {
+    node : Node;
+    fScore : number;
+    constructor(node : Node, fscore : number){
+        this.node = node;
+        this.fScore = fscore;
+    }
+}
 
 function prettyPrintOpenSet<Node>(pq : collections.PriorityQueue<Node>) {
     console.log("OpenSet", pq.size());
@@ -95,17 +103,17 @@ function aStarSearch<Node> (
     var mHeuristics = memoizeHeuristics.bind(this, mHeuristicMap, heuristics);
 
     var closedSet : Node[] = [];
-    var nodeCompare = (n1:Node, n2:Node) => {
-        return lookupWithDefaultInfinity(n2, fScore) - lookupWithDefaultInfinity(n1, fScore);
+    var wrapperNodeCompare = (n1 : FScoreNodeWrapper<Node>, n2 : FScoreNodeWrapper<Node>) => {
+        return n2.fScore - n1.fScore;
     };
-    var openSetP = new collections.PriorityQueue(nodeCompare);
+    var openSetP = new collections.PriorityQueue<FScoreNodeWrapper<Node>>(wrapperNodeCompare);
     var gScore = new collections.Dictionary<Node, number>();
     var cameFrom = new collections.Dictionary<Node,Node>(JSON.stringify);
     var fScore = new collections.Dictionary<Node, number>();
 
-    openSetP.add(start);
     gScore.setValue(start, 0);
     fScore.setValue(start, mHeuristics(start));
+    openSetP.add(new FScoreNodeWrapper(start, fScore.getValue(start)));
 
     function updateScores(neighbor:Node, tentativeScore:number) : void {
         gScore.setValue(neighbor, tentativeScore);
@@ -115,7 +123,7 @@ function aStarSearch<Node> (
     while (!openSetP.isEmpty()){
 
         count++;
-        var current = openSetP.dequeue();
+        var current = openSetP.dequeue().node;
         if(goal(current)){
             console.log("Returning from aStar");
             return {
@@ -135,27 +143,16 @@ function aStarSearch<Node> (
             }
 
             var tentativeScore = lookupWithDefaultInfinity(current, gScore) + e.cost;
-            if (!priorityQueueContainsElement<Node>(openSetP, neighbor, graph)){
-                updateScores(neighbor, tentativeScore);
-                openSetP.add(neighbor);
-            } else if (tentativeScore >= lookupWithDefaultInfinity(neighbor, gScore)){
+            if (tentativeScore >= lookupWithDefaultInfinity(neighbor, gScore)) {
                 continue;
             } else {
                 updateScores(neighbor, tentativeScore);
-                // We haven't found any way to update a value in the PriorityQueue
-                // so when necessary we refresh the queue to make sure items are correctly ordered.
-                var newQueue = new PriorityQueue(nodeCompare);
-                openSetP.forEach(n => newQueue.add(n));
-                openSetP = newQueue;
+                openSetP.add(new FScoreNodeWrapper(neighbor, lookupWithDefaultInfinity(neighbor, fScore)));
             }
 
             cameFrom.setValue(neighbor, current);
         }
-        if(1==2){
-            throw "end";
-        }
-
-
+        
         var now = Date.now();
 
         // While this solution for timeout isn't optimal:
@@ -166,23 +163,6 @@ function aStarSearch<Node> (
         }
     }
     throw "No path found";
-}
-
-function priorityQueueContainsElement<Node>(priorityQueue : collections.PriorityQueue<Node>, neighbour : Node, g : Graph<Node>){
-    try {
-        priorityQueue.forEach(n => {
-            if(g.compareNodes(n, neighbour) === 0){
-                throw "value found";
-            }
-        });
-    } catch (error) {
-        if(error === "value found"){
-            return true;
-        } else {
-            throw error;
-        }
-    }
-    return false;
 }
 
 function closedSetContainsElement<Node>(s : Node[], needle : Node, g : Graph<Node>) {
