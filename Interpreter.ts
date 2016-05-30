@@ -100,7 +100,7 @@ module Interpreter {
       var keys = [state.holding];
       var keysLocation = resolveEntityKeys(cmd.location.entity, state);
       var validTuples = filterValidPairs(keys, keysLocation, cmd.location.relation, state);
-      
+
       if(validTuples.length === 0) {
           throw "No interpretations found";
       }
@@ -112,7 +112,7 @@ module Interpreter {
       return validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
   }
 
-  function stringifyObject(key : string, state : WorldState) {
+  export function stringifyObject(key : string, state : WorldState) {
     if(key === "floor"){
       return key;
     }
@@ -272,7 +272,7 @@ module Interpreter {
     }
 
     export function canPlaceOnTopOrInside(key1 : string, key2 : string, state : WorldState) {
-        if(key2 === "floor" || (state.objects[key1].form !== "ball" && canPlaceOnTop(key1, key2, state))) {
+        if(key2 === "floor" || (state.objects[key1].form !== "ball" && state.objects[key2].form !== "box" && canPlaceOnTop(key1, key2, state))) {
           return true;
         } else if(state.objects[key2].form === "box" && state.objects[key1].form !== "floor" && boxCanHoldObject(key2, key1, state)){
           return true;

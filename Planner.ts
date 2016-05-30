@@ -148,10 +148,63 @@ module Planner {
         var after = Date.now();
 
         console.log("Ran in", after - before);
-
-        var actions = result.path.map(wwn => wwn.action);
-        actions.shift();
+        result.path.shift(); // Remove starting state from path
+        var actions = stringifyPlan(result);
         return actions;
+    }
+
+    function stringifyPlan(plan : SearchResult<WorldWrapperNode>) : string[] {
+        var actions : string[] = [];
+        var explainations : string[] = [];
+        for(var i = 0; i < plan.path.length; i++){
+            
+            var curr = plan.path[i];
+            var currState = curr.state;
+            actions.push(curr.action);
+
+            if(curr.action === "p") {
+                var obj = currState.holding;
+                if(plan.path.length-1 === i){
+                    explainations.push("Picking up " +
+                        Interpreter.stringifyObject(obj, curr.state)
+                    )
+                } else {
+                    for(var j = i+1; j < plan.path.length; j++){
+                        var target = plan.path[j];
+                        var targetState = target.state;
+                        if(target.action === "d"){
+                            var stack = targetState.stacks[targetState.arm];
+                            if(stack.length === 1){
+                                explainations.push("Moving the " + Interpreter.stringifyObject(obj, curr.state) + " to the floor");
+                                break;
+                            } else {
+                                var uppermostObj = stack[stack.length - 2];
+                                var relation = "ontop of";
+                                if(targetState.objects[uppermostObj].form === "box"){
+                                    relation = "inside";
+                                }
+                                explainations.push("Moving the " + Interpreter.stringifyObject(obj, curr.state) + " " + relation + " the " + Interpreter.stringifyObject(uppermostObj, curr.state));
+                                break;
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+
+        var stringifiedPlan : string[] = [];
+        stringifiedPlan.push(explainations.shift());
+        for(var currAction of actions){
+            stringifiedPlan.push(currAction);
+            if(currAction === "d" && explainations.length > 0){
+                stringifiedPlan.push(explainations.shift());
+            }
+        }
+
+        return stringifiedPlan;
+
+
     }
 
 }
