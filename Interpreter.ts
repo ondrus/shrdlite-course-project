@@ -203,11 +203,18 @@ module Interpreter {
     */
     function filterValidPairs(keys : string[], keys2 : string[], relation : string, state : WorldState) : string[][] {
       var pairs : string[][] = [];
+      var alreadyTrue : string[][] = [];
+
       for(var fk of keys) {
         for (var sk of keys2) {
           if(sk === fk) {
             continue;
           }
+            if(checkBinaryConstraint([sk], [fk], relation, state).length === 1){
+                alreadyTrue.push([sk, fk]);
+                continue;
+            }
+
           switch(relation) {
             case "ontop":
             case "inside":
@@ -234,6 +241,9 @@ module Interpreter {
               break;
           }
         }
+      }
+      if(pairs.length === 0 && alreadyTrue.length > 0){
+          throw "This is already true";
       }
       return pairs;
     }
