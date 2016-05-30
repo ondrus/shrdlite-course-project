@@ -92,6 +92,26 @@ module Interpreter {
       return valid.map(validKey => [{polarity:true, relation:"holding", args: [validKey]}]);
   }
 
+  function interpretPutCase(cmd:Parser.Command, state:WorldState) {
+      if(!state.holding) {
+          throw "What does \"it\" mean? Not holding anything";
+      }
+
+      var keys = [state.holding];
+      var keysLocation = resolveEntityKeys(cmd.location.entity, state);
+      var validTuples = filterValidPairs(keys, keysLocation, cmd.location.relation, state);
+      
+      if(validTuples.length === 0) {
+          throw "No interpretations found";
+      }
+
+      if(validTuples.length > 1) {
+          throw produceErrorString(validTuples, cmd.location.relation, state);
+      }
+
+      return validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
+  }
+
   function stringifyObject(key : string, state : WorldState) {
     if(key === "floor"){
       return key;
@@ -150,6 +170,7 @@ module Interpreter {
   * @returns A list of list of Literal, representing a formula in disjunctive normal form.
   */
   function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
+      console.log(cmd.command);
     if (cmd.command === "take") {
       var formula = interpretTakeCase(cmd, state);
       if(formula.length > 1) {
@@ -158,6 +179,8 @@ module Interpreter {
       return formula;
     } else if (cmd.command === "move") {
       return interpretMoveCase(cmd, state);
+    } else if (cmd.command === "put") {
+        return interpretPutCase(cmd, state);
     } else {
       throw "Invalid command";
     }
