@@ -106,17 +106,39 @@ module Interpreter {
     var keys = resolveEntityKeys(cmd.entity, state);
     var keysLocation = resolveEntityKeys(cmd.location.entity, state);
     var validTuples = filterValidPairs(keys, keysLocation, cmd.location.relation, state);
-
     if(validTuples.length === 0) {
       throw "No interpretations found";
     }
 
     if(validTuples.length > 1) {
-      throw "Do you mean the " + validTuples.map(tuple => stringifyObject(tuple[0], state) + " " + cmd.location.relation + " the " + stringifyObject(tuple[1], state)).join(" or the ") + "?";
+        throw produceErrorString(validTuples, cmd.location.relation, state);
     }
 
     return validTuples.map(pair => [{polarity:true, relation:cmd.location.relation, args: pair}]);
 
+  }
+
+  function produceErrorString(tuples : string[][], relation:string, state : WorldState) : string {
+      var errMsg : string = "Do you mean";
+      var errors : string[] = [];
+      for(var i = 0; i < tuples.length - 1; i=i+2){
+          var key11 = tuples[i][0];
+          var key21 = tuples[i][1];
+
+          var key12 = tuples[i+1][0];
+          var key22 = tuples[i+1][1];
+
+          if(key11 === key12){
+              errors.push(" the " + stringifyObject(key11, state) + " " + relation +  " the "  + stringifyObject(key21, state) + " or " + " the " + stringifyObject(key22, state));
+          } else if(key21 === key22){
+              errors.push(" the " + stringifyObject(key12, state) + " or " + stringifyObject(key11, state) + " " + relation + " the " + stringifyObject(key22, state));
+          } else {
+              errors.push(" the " + stringifyObject(key11, state) + " " + relation + " the " + stringifyObject(key21, state)
+              + " or the " + stringifyObject(key12, state) + " " + relation + " the " + stringifyObject(key22, state));
+          }
+
+      }
+      return errMsg + errors.join(" OR");
   }
 
 
@@ -148,6 +170,9 @@ module Interpreter {
      */
     function resolveEntityKeys(entity: Parser.Entity, state: WorldState): string [] {
       var obj = entity.object;
+      if (entity.quantifier === "all") {
+          throw "Sorry, I cannot understand quantifiers such as all, any etc";
+      }
       if(obj.location) {
         var entityKeys = resolveEntityKeys(obj.location.entity, state);
         var relation = obj.location.relation;
