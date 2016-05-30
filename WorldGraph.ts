@@ -43,7 +43,7 @@ class WorldGraph implements Graph<WorldWrapperNode> {
         if (state.arm < state.stacks.length - 1) {
             edges.push(this.createRightMoveActionEdge(node));
         }
-        ////console.log/"Outgoing edges", JSON.stringify(edges));
+        //console.log("Outgoing edges", JSON.stringify(edges.map(e => e.to.action)));
         ////console.log/"NbrOfEdges", edges.length);
         return edges;
     }
@@ -123,7 +123,7 @@ function copyWorld(s:WorldState):WorldState {
     return JSON.parse(JSON.stringify(s));
 }
 
-function canDrop(s:WorldState):boolean {
+function canDrop(s:WorldState) : boolean {
     var key1 = s.holding;
     var stack = s.stacks[s.arm];
     var key2 = stack[stack.length - 1];

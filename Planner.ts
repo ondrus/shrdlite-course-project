@@ -144,51 +144,58 @@ module Planner {
         var goalFunction = (wwn:WorldWrapperNode) => goalReached(wwn.state, interpretation);
         var heuristicFunction = (wwn:WorldWrapperNode) => chooseCheapestLiteral(wwn.state, interpretation);
         var before = Date.now();
-        var result = aStarSearch<WorldWrapperNode>(graph, start, goalFunction, heuristicFunction, 240);
+        var result = aStarSearch<WorldWrapperNode>(graph, start, goalFunction, heuristicFunction, 120);
         var after = Date.now();
 
         console.log("Ran in", after - before);
-        result.path.shift(); // Remove starting state from path
         var actions = stringifyPlan(result);
         return actions;
+    }
+
+    function findDropTargetAndAddExplaination(i:number, plan:SearchResult<WorldWrapperNode>, explainations:string[], obj:string, curr:WorldWrapperNode) {
+        for (var j = i + 1; j < plan.path.length; j++) {
+            var target = plan.path[j];
+            var targetState = target.state;
+            if (target.action === "d") {
+                var stack = targetState.stacks[targetState.arm];
+                if (stack.length === 1) {
+                    explainations.push("Moving the " + Interpreter.stringifyObject(obj, curr.state) + " to the floor");
+                    break;
+                } else {
+                    var uppermostObj = stack[stack.length - 2];
+                    var relation = "ontop of";
+                    if (targetState.objects[uppermostObj].form === "box") {
+                        relation = "inside";
+                    }
+                    explainations.push("Moving the " + Interpreter.stringifyObject(obj, curr.state) + " " + relation + " the " + Interpreter.stringifyObject(uppermostObj, curr.state));
+                    break;
+                }
+            }
+
+        }
     }
 
     function stringifyPlan(plan : SearchResult<WorldWrapperNode>) : string[] {
         var actions : string[] = [];
         var explainations : string[] = [];
-        for(var i = 0; i < plan.path.length; i++){
-            
+        var obj : string;
+
+        for(var i = 1; i < plan.path.length; i++){
             var curr = plan.path[i];
             var currState = curr.state;
             actions.push(curr.action);
-
+            if(i === 1 && plan.path[i-1].state.holding){
+                obj = plan.path[i-1].state.holding;
+                findDropTargetAndAddExplaination(i-1, plan, explainations, obj, curr);
+            }
             if(curr.action === "p") {
-                var obj = currState.holding;
-                if(plan.path.length-1 === i){
+                obj = currState.holding;
+                if(plan.path.length - 1 === i){
                     explainations.push("Picking up " +
                         Interpreter.stringifyObject(obj, curr.state)
                     )
                 } else {
-                    for(var j = i+1; j < plan.path.length; j++){
-                        var target = plan.path[j];
-                        var targetState = target.state;
-                        if(target.action === "d"){
-                            var stack = targetState.stacks[targetState.arm];
-                            if(stack.length === 1){
-                                explainations.push("Moving the " + Interpreter.stringifyObject(obj, curr.state) + " to the floor");
-                                break;
-                            } else {
-                                var uppermostObj = stack[stack.length - 2];
-                                var relation = "ontop of";
-                                if(targetState.objects[uppermostObj].form === "box"){
-                                    relation = "inside";
-                                }
-                                explainations.push("Moving the " + Interpreter.stringifyObject(obj, curr.state) + " " + relation + " the " + Interpreter.stringifyObject(uppermostObj, curr.state));
-                                break;
-                            }
-                        }
-
-                    }
+                    findDropTargetAndAddExplaination(i, plan, explainations, obj, curr);
                 }
             }
         }

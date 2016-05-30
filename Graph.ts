@@ -49,8 +49,9 @@ class FScoreNodeWrapper<Node> {
 function prettyPrintOpenSet<Node>(pq : collections.PriorityQueue<Node>) {
     console.log("OpenSet", pq.size());
     pq.forEach(n => {
-        var state = n["state"];
+        var state = n["node"]["state"];
         console.log("------");
+        console.log(n["node"]["fScore"]);
         console.log(JSON.stringify(state.stacks), n["action"], JSON.stringify(state.arm, null, 2), JSON.stringify(state.holding, null, 2));
     });
     console.log("------")
@@ -138,12 +139,16 @@ function aStarSearch<Node> (
         var outgoing = graph.outgoingEdges(current);
         for (var e of outgoing){
             var neighbor = e.to;
+
             if(closedSetContainsElement(closedSet, neighbor, graph)){
                 continue;
             }
 
             var tentativeScore = lookupWithDefaultInfinity(current, gScore) + e.cost;
-            if (tentativeScore >= lookupWithDefaultInfinity(neighbor, gScore)) {
+            if(!priorityQueueContainsElement<Node>(openSetP, neighbor, graph)){
+                updateScores(neighbor, tentativeScore);
+                openSetP.add(new FScoreNodeWrapper(neighbor, lookupWithDefaultInfinity(neighbor, fScore)));
+            } else if (tentativeScore >= lookupWithDefaultInfinity(neighbor, gScore)) {
                 continue;
             } else {
                 updateScores(neighbor, tentativeScore);
@@ -154,6 +159,8 @@ function aStarSearch<Node> (
         }
         
         var now = Date.now();
+        //if(1==1)
+        //    throw "end";
 
         // While this solution for timeout isn't optimal:
         // (if an iteration takes 5 minutes the timout will trigger too late if set to less then 5 minutes)
@@ -163,6 +170,23 @@ function aStarSearch<Node> (
         }
     }
     throw "No path found";
+}
+
+function priorityQueueContainsElement<Node>(priorityQueue : collections.PriorityQueue<FScoreNodeWrapper<Node>>, neighbour : Node, g : Graph<Node>){
+    try {
+        priorityQueue.forEach(n => {
+            if(g.compareNodes(n.node, neighbour) === 0){
+                throw "value found";
+            }
+        });
+    } catch (error) {
+        if(error === "value found"){
+            return true;
+        } else {
+            throw error;
+        }
+    }
+    return false;
 }
 
 function closedSetContainsElement<Node>(s : Node[], needle : Node, g : Graph<Node>) {

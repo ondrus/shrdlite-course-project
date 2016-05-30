@@ -488,7 +488,7 @@ module Interpreter {
     }
 
     /**
-    * Returns a list of all the keys in the worls state.
+    * Returns a list of all the keys in the worlds state.
     */
     function getAllRelevantKeys(state: WorldState) : string[] {
       var keys : string[] = [];
