@@ -170,6 +170,6 @@ module Heuristics {
                 closestFloor = curr;
             }
         }
-        return curr;
+        return closestFloor;
     }
 }

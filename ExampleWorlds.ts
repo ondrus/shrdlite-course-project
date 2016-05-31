@@ -105,14 +105,14 @@ ExampleWorlds["small"] = {
 
 
 ExampleWorlds["tiny"] = {
-    "stacks": [["pyramid"],["box"],[], [], []],
+    "stacks": [[],["plank", "box", "pyramid"], [], [], []],
     "holding": null,
-    "arm": 0,
+    "arm": 3,
     "objects": {
         "a": { "form":"table",   "size":"small",  "color":"white" },
         "pyramid": { "form":"pyramid",   "size":"small",  "color":"white" },
-        "c": { "form":"table",   "size":"large",  "color":"red"   },
-        "box": { "form":"box",   "size":"small",  "color":"red"   },
+        "plank": { "form":"plank",   "size":"large",  "color":"red"   },
+        "box": { "form":"box",   "size":"large",  "color":"red"   },
     },
     "examples": [
         "take the brick",
