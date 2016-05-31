@@ -118,8 +118,32 @@ module Interpreter {
     }
 
     var o : Parser.Object = state.objects[key];
+    var colorNeeded = false;
+    var sizeNeeded = false;
 
-    return [o.size, o.color, o.form].join(" ");
+    var propertiesForObjToBeUnique = [o.form];
+    getAllRelevantKeys(state).filter(oKey => key !== oKey && state.objects[oKey].form === o.form).forEach(oKey => {
+      var o2 : Parser.Object = state.objects[oKey];
+      if(o.size === o2.size){
+        colorNeeded = true;
+      } else if (o.color === o2.color){
+        sizeNeeded = true;
+      }
+    });
+
+    if(sizeNeeded){
+      propertiesForObjToBeUnique.unshift(o.size)
+    }
+
+    if(colorNeeded){
+      propertiesForObjToBeUnique.unshift(o.color)
+    }
+
+    if(propertiesForObjToBeUnique.length === 1) {
+      propertiesForObjToBeUnique.unshift(o.size);
+    }
+
+    return propertiesForObjToBeUnique.join(" ");
   }
 
   function interpretMoveCase(cmd:Parser.Command, state:WorldState) {
@@ -139,26 +163,46 @@ module Interpreter {
   }
 
   function produceErrorString(tuples : string[][], relation:string, state : WorldState) : string {
-      var errMsg : string = "Do you mean";
-      var errors : string[] = [];
-      for(var i = 0; i < tuples.length - 1; i=i+2){
-          var key11 = tuples[i][0];
-          var key21 = tuples[i][1];
+    var errors = [];
+    var lookup = {};
+    var reverseLookup = {};
+    for(var i = 0; i < tuples.length; i++){
+      var key1 = tuples[i][0];
+      var key2 = tuples[i][1];
 
-          var key12 = tuples[i+1][0];
-          var key22 = tuples[i+1][1];
+      var connected = lookup[key1] || [];
+      connected.push(key2);
+      lookup[key1] = connected;
 
-          if(key11 === key12){
-              errors.push(" the " + stringifyObject(key11, state) + " " + relation +  " the "  + stringifyObject(key21, state) + " or " + " the " + stringifyObject(key22, state));
-          } else if(key21 === key22){
-              errors.push(" the " + stringifyObject(key12, state) + " or " + stringifyObject(key11, state) + " " + relation + " the " + stringifyObject(key22, state));
-          } else {
-              errors.push(" the " + stringifyObject(key11, state) + " " + relation + " the " + stringifyObject(key21, state)
-              + " or the " + stringifyObject(key12, state) + " " + relation + " the " + stringifyObject(key22, state));
-          }
+      var connected2 = reverseLookup[key2] || [];
+      connected2.push(key1);
+      reverseLookup[key2] = connected2;
+    }
 
+    for(var k of Object.keys(lookup)) {
+      var connected = lookup[k];
+      var itemsStrs = [];
+      if(connected.length > 1){
+        var msg = " the " + stringifyObject(k, state) + " " + relation +  " the ";
+        for (var k2 of connected) {
+          itemsStrs.push(stringifyObject(k2, state));
+        }
+        msg += itemsStrs.join(" or  the ");
+        errors.push(msg);
+      } else {
+        var msg = " the ";
+        var reverseConnected = reverseLookup[connected[0]];
+        for (var k2 of reverseConnected) {
+          itemsStrs.push(stringifyObject(k2, state));
+        }
+        msg += itemsStrs.join(" or  the ");
+        errors.push(msg + " " + relation + " " + stringifyObject(connected[0], state));
+        break;
       }
-      return errMsg + errors.join(" OR");
+
+    }
+
+    return "Do you mean to put " + errors.join(" OR");
   }
 
 
@@ -170,7 +214,6 @@ module Interpreter {
   * @returns A list of list of Literal, representing a formula in disjunctive normal form.
   */
   function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
-      console.log(cmd.command);
     if (cmd.command === "take") {
       var formula = interpretTakeCase(cmd, state);
       if(formula.length > 1) {
@@ -233,6 +276,7 @@ module Interpreter {
           if(sk === fk) {
             continue;
           }
+
             if(checkBinaryConstraint([sk], [fk], relation, state).length === 1){
                 alreadyTrue.push([sk, fk]);
                 continue;
