@@ -6,9 +6,7 @@
 *
 *  Types for generic A\* implementation.
 *
-*  *NB.* The only part of this module
-*  that you should change is the `aStarSearch` function. Everything
-*  else should be used as-is.
+*
 */
 
 import forEach = collections.arrays.forEach;
@@ -37,6 +35,9 @@ class SearchResult<Node> {
     iterations: number;
 }
 
+/**
+ * Class to help wrap nodes with fscore to be used in the priority queue in A*
+ */
 class FScoreNodeWrapper<Node> {
     node : Node;
     fScore : number;
@@ -82,7 +83,7 @@ function aStarSearch<Node> (
     var wrapperNodeCompare = (n1 : FScoreNodeWrapper<Node>, n2 : FScoreNodeWrapper<Node>) => {
         return n2.fScore - n1.fScore;
     };
-    var openSetP = new collections.PriorityQueue<FScoreNodeWrapper<Node>>(wrapperNodeCompare);
+    var openSetP = new PriorityQueue<FScoreNodeWrapper<Node>>(wrapperNodeCompare);
     var gScore = new collections.Dictionary<Node, number>();
     var cameFrom = new collections.Dictionary<Node,Node>(JSON.stringify);
     var fScore = new collections.Dictionary<Node, number>();
@@ -145,6 +146,15 @@ function aStarSearch<Node> (
     throw "No path found";
 }
 
+/**
+ * Lookup function to check contains in priorityQueue, needed since the priority queue automatically uses the compare function
+ * given and this results in state with same cost being considered equal. If we don't check that it isn't already contained we
+ * risk never exhausting the search.
+ * @param priorityQueue - queue to look in
+ * @param neighbour - node to search for
+ * @param g - graph to find compareNodes function in
+ * @returns {boolean} - if the element was found or not in the queue.
+ */
 function priorityQueueContainsElement<Node>(priorityQueue : collections.PriorityQueue<FScoreNodeWrapper<Node>>, neighbour : Node, g : Graph<Node>){
     try {
         priorityQueue.forEach(n => {
@@ -162,6 +172,13 @@ function priorityQueueContainsElement<Node>(priorityQueue : collections.Priority
     return false;
 }
 
+/**
+ * Lookup function to see if see if list contain particular node
+ * @param s - list of nodes to search in
+ * @param needle - node to search for
+ * @param g - graph to find compare function for nodes in.
+ * @returns {boolean} - if the element was found.
+ */
 function closedSetContainsElement<Node>(s : Node[], needle : Node, g : Graph<Node>) {
     for (var n of s) {
         if (g.compareNodes(n, needle) === 0) {
@@ -171,6 +188,12 @@ function closedSetContainsElement<Node>(s : Node[], needle : Node, g : Graph<Nod
     return false;
 }
 
+/**
+ *  Helper function to backtrack and reconstruct the path to the goal.
+ * @param cameFrom - map connecting nodes to eachother.
+ * @param current - start node to reconstruct from
+ * @returns {Node[]} - list of nodes in the order they were traversed to the goal
+ */
 function reconstructPath<Node>(
     cameFrom: collections.Dictionary<Node, Node>,
     current: Node
@@ -183,6 +206,12 @@ function reconstructPath<Node>(
     return totalPath;
 }
 
+/**
+ * Lookup function which returns the default value Infinity if element wasn't found
+ * @param key - key to look up
+ * @param map - map to look up in
+ * @returns {number} - the value of the key or infinity if not found.
+ */
 function lookupWithDefaultInfinity<Node>(
     key: Node,
     map: collections.Dictionary<Node, number>
@@ -191,6 +220,13 @@ function lookupWithDefaultInfinity<Node>(
     return res !== undefined ? res : Infinity;
 }
 
+/**
+ * Helper function to help memoize heurstic value of node
+ * @param map - map to store memoized values in
+ * @param heuristics - heuristic function to use
+ * @param n - node to lookup
+ * @returns {number} - returns the number and populates the map if not there already.
+ */
 function memoizeHeuristics(
     map:collections.Dictionary<Node, number>,
     heuristics : (n:Node) => number,

@@ -1,11 +1,18 @@
 ///<reference path="Interpreter.ts"/>
 
+/**
+ * This module consist of different part of our hueristic function. Our heuristic function is composed of different functions
+ * depending on which relation were searching for. Each relation has a corresponding function here with the exception of the composed function
+ * insideOrOntopOrBelowHeuristic which takes more then one relation into account. This among with some utility/helper methods.
+ * They should all have self explainatory names.
+ */
 module Heuristics {
 
     import Literal = Interpreter.Literal;
 
     var NBR_ACTIONS_NEEDED_TO_MOVE_OBJ_FROM_STACK = 3;
-
+    
+    
     export function besideHeuristic(literal : Literal, state : WorldState) {
         var key1 = literal.args[0];
         var key2 = literal.args[1];

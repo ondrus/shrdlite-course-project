@@ -1,6 +1,10 @@
 ///<reference path="Interpreter.ts"/>
 ///<reference path="Graph.ts"/>
 
+/**
+ * Wrapper node class wrapping world state with the action that was
+ * the source for moving into this state.
+ */
 class WorldWrapperNode {
     state:WorldState;
     action:string;
@@ -15,9 +19,16 @@ class WorldWrapperNode {
     }
 }
 
-
+/**
+ * A graph describing different states of a Shrdlite world.
+ */
 class WorldGraph implements Graph<WorldWrapperNode> {
 
+    /**
+     * Dynamically generating outgoing edges of a particular state
+     * @param node - the node to generate edges from
+     * @returns {Edge<WorldWrapperNode>[]} - the edges going out from this node. Respectign physical laws and such.
+     */
     outgoingEdges(node:WorldWrapperNode):Edge<WorldWrapperNode>[] {
         var edges:Edge<WorldWrapperNode>[];
         edges = [];
@@ -43,11 +54,15 @@ class WorldGraph implements Graph<WorldWrapperNode> {
         if (state.arm < state.stacks.length - 1) {
             edges.push(this.createRightMoveActionEdge(node));
         }
-        //console.log("Outgoing edges", JSON.stringify(edges.map(e => e.to.action)));
-        ////console.log/"NbrOfEdges", edges.length);
         return edges;
     }
 
+    /**
+     * Utility method to compare two nodes and tell if they're alike.
+     * @param ws1 - first node
+     * @param ws2 - second node
+     * @returns {number} - if non-zero they're different. The value is otherwise nonsensical.
+     */
     compareNodes(ws1:WorldWrapperNode, ws2:WorldWrapperNode):number {
         var s1 = ws1.state;
         var s2 = ws2.state;
@@ -119,10 +134,21 @@ class WorldGraph implements Graph<WorldWrapperNode> {
 
 }
 
+/**
+ * Utility method to copy the world.
+ * @param s - Worlstate
+ * @returns - a copy of the world.
+ */
 function copyWorld(s:WorldState):WorldState {
     return JSON.parse(JSON.stringify(s));
 }
 
+/**
+ * Wrapper method to Interpreter's canPlaceOnTopOrInside to help tell if it is possible to drop current item
+ * in the arm at it's location.
+ * @param s - current world state
+ * @returns {boolean} - if a drop is allowed or not according to the physical laws.
+ */
 function canDrop(s:WorldState) : boolean {
     var key1 = s.holding;
     var stack = s.stacks[s.arm];
