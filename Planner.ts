@@ -152,29 +152,6 @@ module Planner {
         return actions;
     }
 
-    function findDropTargetAndAddExplaination(i:number, plan:SearchResult<WorldWrapperNode>, explainations:string[], obj:string, curr:WorldWrapperNode) {
-        for (var j = i + 1; j < plan.path.length; j++) {
-            var target = plan.path[j];
-            var targetState = target.state;
-            if (target.action === "d") {
-                var stack = targetState.stacks[targetState.arm];
-                if (stack.length === 1) {
-                    explainations.push("Moving the " + Interpreter.stringifyObject(obj, curr.state) + " to the floor");
-                    break;
-                } else {
-                    var uppermostObj = stack[stack.length - 2];
-                    var relation = "ontop of";
-                    if (targetState.objects[uppermostObj].form === "box") {
-                        relation = "inside";
-                    }
-                    explainations.push("Moving the " + Interpreter.stringifyObject(obj, curr.state) + " " + relation + " the " + Interpreter.stringifyObject(uppermostObj, curr.state));
-                    break;
-                }
-            }
-
-        }
-    }
-
     function stringifyPlan(plan : SearchResult<WorldWrapperNode>) : string[] {
         var actions : string[] = [];
         var explainations : string[] = [];
@@ -212,6 +189,29 @@ module Planner {
         return stringifiedPlan;
 
 
+    }
+
+    function findDropTargetAndAddExplaination(i:number, plan:SearchResult<WorldWrapperNode>, explainations:string[], obj:string, curr:WorldWrapperNode) {
+        for (var j = i + 1; j < plan.path.length; j++) {
+            var target = plan.path[j];
+            var targetState = target.state;
+            if (target.action === "d") {
+                var stack = targetState.stacks[targetState.arm];
+                if (stack.length === 1) {
+                    explainations.push("Moving the " + Interpreter.stringifyObject(obj, curr.state) + " to the floor");
+                    break;
+                } else {
+                    var uppermostObj = stack[stack.length - 2];
+                    var relation = "ontop of";
+                    if (targetState.objects[uppermostObj].form === "box") {
+                        relation = "inside";
+                    }
+                    explainations.push("Moving the " + Interpreter.stringifyObject(obj, curr.state) + " " + relation + " the " + Interpreter.stringifyObject(uppermostObj, curr.state));
+                    break;
+                }
+            }
+
+        }
     }
 
 }
