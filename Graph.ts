@@ -46,31 +46,6 @@ class FScoreNodeWrapper<Node> {
     }
 }
 
-function prettyPrintOpenSet<Node>(pq : collections.PriorityQueue<Node>) {
-    console.log("OpenSet", pq.size());
-    pq.forEach(n => {
-        var state = n["node"]["state"];
-        console.log("------");
-        console.log(n["node"]["fScore"]);
-        console.log(JSON.stringify(state.stacks), n["action"], JSON.stringify(state.arm, null, 2), JSON.stringify(state.holding, null, 2));
-    });
-    console.log("------")
-}
-
-function prettyPrintClosedSet<Node>(s : Node[]){
-    console.log("ClosedSet", s.length);
-    s.forEach(n => {
-        var state = n["state"];
-        console.log(JSON.stringify(state.stacks), n["action"], JSON.stringify(state.arm, null, 2), JSON.stringify(state.holding, null, 2));
-    })
-}
-
-function prettyPrintScore<Node>(table : collections.Dictionary<Node, number>) {
-    table.keys().forEach(k => {
-        console.log(k, table.getValue(k));
-    })
-}
-
 /**
  * A\* search implementation, parameterised by a `Node` type. The code
  * here is just a template; you should rewrite this function

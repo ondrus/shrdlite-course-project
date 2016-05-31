@@ -163,14 +163,19 @@ module Interpreter {
   }
 
   function produceErrorString(tuples : string[][], relation:string, state : WorldState) : string {
-    var errors = [];
-    var lookup = {};
-    var reverseLookup = {};
+    var errors : string[] = [];
+    interface LookupObj {
+      [name: string]: string[];
+    }
+
+    var lookup : LookupObj = {};
+    var reverseLookup : LookupObj = {};
     for(var i = 0; i < tuples.length; i++){
       var key1 = tuples[i][0];
       var key2 = tuples[i][1];
 
-      var connected = lookup[key1] || [];
+      var connected : string[] = lookup[key1] || [];
+
       connected.push(key2);
       lookup[key1] = connected;
 
@@ -181,7 +186,7 @@ module Interpreter {
 
     for(var k of Object.keys(lookup)) {
       var connected = lookup[k];
-      var itemsStrs = [];
+      var itemsStrs : string[] = [];
       if(connected.length > 1){
         var msg = " the " + stringifyObject(k, state) + " " + relation +  " the ";
         for (var k2 of connected) {
